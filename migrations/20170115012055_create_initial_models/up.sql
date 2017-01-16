@@ -1,0 +1,14 @@
+CREATE TABLE database (
+  id INTEGER PRIMARY KEY NOT NULL,
+  title VARCHAR NOT NULL
+  description TEXT
+);
+CREATE TABLE tag (
+  id INTEGER PRIMARY KEY NOT NULL,
+  title VARCHAR NOT NULL
+);
+CREATE TABLE database_tag (
+  id INTEGER PRIMARY KEY NOT NULL,
+  database_id INTEGER NOT NULL,
+  tag_id INTEGER NOT NULL
+);
