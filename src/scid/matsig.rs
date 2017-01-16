@@ -170,6 +170,36 @@ const STD_START: MaterialSignature =
     (8 << SHIFT_WP) | (8 << SHIFT_BP));
 
 
+// matsig_makeString: sets s to be a string representation of the sig,
+
+pub fn make_string (m: MaterialSignature) -> String {
+    let mut s: String = String::with_capacity(32);
+    for _ in 0..count_wq(m) { s.push('Q'); }
+    for _ in 0..count_wr(m) { s.push('R'); }
+    for _ in 0..count_wb(m) { s.push('B'); }
+    for _ in 0..count_wn(m) { s.push('N'); }
+    let wp = count_wp(m);
+    if wp > 0 {
+        for c in wp.to_string().chars() {
+            s.push(c);
+        }
+        s.push('0');
+    }
+    s.push(':');
+    
+    for _ in 0..count_bq(m) { s.push('Q'); }
+    for _ in 0..count_br(m) { s.push('R'); }
+    for _ in 0..count_bb(m) { s.push('B'); }
+    for _ in 0..count_bn(m) { s.push('N'); }
+    let bp = count_bp(m);
+    if bp > 0 {
+        for c in bp.to_string().chars() {
+            s.push(c);
+        }
+        s.push('0');
+    }
+    s
+}
 
 #[cfg(test)]
 mod tests {
@@ -343,6 +373,16 @@ mod tests {
             let none = set_count(none, *p, 15);
             assert_eq!(get_count(none, *p), 3);
         }
+    }
+
+    #[test]
+    fn test_make_string() {
+        let none = 0b0000_0000_0000_0000_0000_0000_0000_0000;
+        assert_eq!(":", make_string(none));
+        let none = 0b0000_0000_1111_1111_1111_1111_1111_1111;
+        assert_eq!("QQQRRRBBBNNN150:QQQRRRBBBNNN150", make_string(none));
+        let none = 0b0000_0000_0101_0101_0101_0101_0101_0101;
+        assert_eq!("QRBN50:QRBN50", make_string(none));
     }
 }
 
