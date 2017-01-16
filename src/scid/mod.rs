@@ -19,3 +19,4 @@
 // SCID compatibility layer
 //------------------------------------------------------------------------------
 pub mod matsig;
+pub mod common;

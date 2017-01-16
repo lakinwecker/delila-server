@@ -22,14 +22,16 @@
 // Matsigs are 32-bit unsigned ints.  We only use 24 bits of this.
 
 // From most significant bits down to least, the matsig layout is:
-// Bits 22-33:  WQ    Bits 10-11:  BQ
-// Bits 20-21:  WN    Bits 08-09:  BR
-// Bits 18-19:  WB    Bits 06-07:  BB
-// Bits 16-17:  WN    Bits 04-05:  BN
-// Bits 12-15:  WP    Bits 00-03:  BP
+// Bits 22-33:  WQ   Bits 10-11:  BQ
+// Bits 20-21:  WR    Bits 08-09:  BR
+// Bits 18-19:  WB  Bits 06-07:  BB
+// Bits 16-17:  WN  Bits 04-05:  BN
+// Bits 12-15:  WP     Bits 00-03:  BP
 
 // This means that pawn counts from 0 to 8 are possible, but for other
 // pieces only counts up to 3 are possible.
+
+use super::common::*;
 
 pub type MaterialSignature = u32;
 
@@ -115,7 +117,57 @@ pub fn has_queens(x: MaterialSignature) -> MaterialSignature  { ((x) & (MASK_WQ 
 pub fn has_rooks(x: MaterialSignature) -> MaterialSignature   { ((x) & (MASK_WR | MASK_BR)) }
 pub fn has_bishops(x: MaterialSignature) -> MaterialSignature { ((x) & (MASK_WB | MASK_BB)) }
 pub fn has_knights(x: MaterialSignature) -> MaterialSignature { ((x) & (MASK_WN | MASK_BN)) }
-pub fn has_pawns(x: MaterialSignature) -> MaterialSignature   { ((x) & (MASK_WP | MASK_BP)) }
+pub fn has_pawn(x: MaterialSignature) -> MaterialSignature   { ((x) & (MASK_WP | MASK_BP)) }
+
+// Macros to extract a particular count:
+
+pub fn count_wq(x: MaterialSignature) -> MaterialSignature { (((x) & MASK_WQ) >> SHIFT_WQ) }
+pub fn count_bq(x: MaterialSignature) -> MaterialSignature { (((x) & MASK_BQ) >> SHIFT_BQ) }
+pub fn count_wr(x: MaterialSignature) -> MaterialSignature { (((x) & MASK_WR) >> SHIFT_WR) }
+pub fn count_br(x: MaterialSignature) -> MaterialSignature { (((x) & MASK_BR) >> SHIFT_BR) }
+pub fn count_wb(x: MaterialSignature) -> MaterialSignature { (((x) & MASK_WB) >> SHIFT_WB) }
+pub fn count_bb(x: MaterialSignature) -> MaterialSignature { (((x) & MASK_BB) >> SHIFT_BB) }
+pub fn count_wn(x: MaterialSignature) -> MaterialSignature { (((x) & MASK_WN) >> SHIFT_WN) }
+pub fn count_bn(x: MaterialSignature) -> MaterialSignature { (((x) & MASK_BN) >> SHIFT_BN) }
+pub fn count_wp(x: MaterialSignature) -> MaterialSignature { (((x) & MASK_WP) >> SHIFT_WP) }
+pub fn count_bp(x: MaterialSignature) -> MaterialSignature { (((x) & MASK_BP) >> SHIFT_BP) }
+
+
+//------------------------------------------------------------------------------
+// get_count():
+//      Inline routine to extract a count of a certain piece type.
+//
+pub fn get_count (m: MaterialSignature, p: Piece) -> MaterialSignature {
+    return (m & MASK_BY_PIECE[p as usize]) >> SHIFT_BY_PIECE[p as usize];
+}
+
+//------------------------------------------------------------------------------
+// set_count():
+//      Inline routine to set a particular count.
+//
+pub fn set_count (m: MaterialSignature, p: Piece, count: UInt) -> MaterialSignature
+{
+    // First we clear the old mask for this piece:
+    let mut m = m & !(MASK_BY_PIECE[p as usize]);
+    let mut count = count;
+    // Avoid overflow.
+    if (p != WP) && (p != BP) && count > 3 {
+        count = 3;
+    }
+    // Now we OR to add the new value in:
+    m = m | (count as UInt) << SHIFT_BY_PIECE[p as usize];
+    m
+}
+
+// Common constant matsigs:
+
+const EMPTY: MaterialSignature = 0;
+const STD_START: MaterialSignature =
+   ((1 << SHIFT_WQ) | (1 << SHIFT_BQ) |
+    (2 << SHIFT_WR) | (2 << SHIFT_BR) |
+    (2 << SHIFT_WB) | (2 << SHIFT_BB) |
+    (2 << SHIFT_WN) | (2 << SHIFT_BN) |
+    (8 << SHIFT_WP) | (8 << SHIFT_BP));
 
 
 
@@ -125,93 +177,172 @@ mod tests {
 
     #[test]
     fn test_flipcolor() {
-		let x = 0b0000_0000_1111_0000_1111_0000_1111_0000;
-		let y = 0b0000_0000_0000_1111_0000_1111_0000_1111;
+        let x = 0b0000_0000_1111_0000_1111_0000_1111_0000;
+        let y = 0b0000_0000_0000_1111_0000_1111_0000_1111;
         assert_eq!(y, flip_color(x));
 
-		let x = 0b0000_0000_1111_0000_1111_0100_1011_0100;
-		let y = 0b0000_0000_0100_1011_0100_1111_0000_1111;
+        let x = 0b0000_0000_1111_0000_1111_0100_1011_0100;
+        let y = 0b0000_0000_0100_1011_0100_1111_0000_1111;
         assert_eq!(y, flip_color(x));
     }
 
     #[test]
-    fn test_has_wq() {
-		let none = 0b0000_0000_0011_1111_1111_1111_1111_1111;
+    fn test_has_wq_count_wq() {
+        let none = 0b0000_0000_0011_1111_1111_1111_1111_1111;
         assert!(has_wq(none) == 0);
-		let some = 0b0000_0000_1100_0000_0000_0000_0000_0000;
+        assert_eq!(count_wq(none), 0);
+        let some = 0b0000_0000_1100_0000_0000_0000_0000_0000;
         assert!(has_wq(some) > 0);
+        assert_eq!(count_wq(some), 3);
     }
 
     #[test]
-    fn test_has_bq() {
-		let none = 0b0000_0000_1111_1111_1111_0011_1111_1111;
+    fn test_has_bq_count_bq() {
+        let none = 0b0000_0000_1111_1111_1111_0011_1111_1111;
         assert!(has_bq(none) == 0);
-		let some = 0b0000_0000_0000_0000_0000_1100_0000_0000;
+        assert_eq!(count_bq(none), 0);
+        let some = 0b0000_0000_0000_0000_0000_1100_0000_0000;
         assert!(has_bq(some) > 0);
+        assert_eq!(count_bq(some), 3);
     }
 
     #[test]
-    fn test_has_wr() {
-		let none = 0b0000_0000_1100_1111_1111_1111_1111_1111;
+    fn test_has_wr_count_wr() {
+        let none = 0b0000_0000_1100_1111_1111_1111_1111_1111;
         assert!(has_wr(none) == 0);
-		let some = 0b0000_0000_0011_0000_0000_0000_0000_0000;
+        assert_eq!(count_wr(none), 0);
+        let some = 0b0000_0000_0011_0000_0000_0000_0000_0000;
         assert!(has_wr(some) > 0);
+        assert_eq!(count_wr(some), 3);
     }
 
     #[test]
-    fn test_has_br() {
-		let none = 0b0000_0000_1111_1111_1111_1100_1111_1111;
+    fn test_has_br_count_br() {
+        let none = 0b0000_0000_1111_1111_1111_1100_1111_1111;
         assert!(has_br(none) == 0);
-		let some = 0b0000_0000_0000_0000_0000_0011_0000_0000;
+        assert_eq!(count_br(none), 0);
+        let some = 0b0000_0000_0000_0000_0000_0011_0000_0000;
         assert!(has_br(some) > 0);
+        assert_eq!(count_br(some), 3);
     }
 
     #[test]
-    fn test_has_wb() {
-		let none = 0b0000_0000_1111_0011_1111_1111_1111_1111;
+    fn test_has_wb_count_wb() {
+        let none = 0b0000_0000_1111_0011_1111_1111_1111_1111;
         assert!(has_wb(none) == 0);
-		let some = 0b0000_0000_0000_1100_0000_0000_0000_0000;
+        assert_eq!(count_wb(none), 0);
+        let some = 0b0000_0000_0000_1100_0000_0000_0000_0000;
         assert!(has_wb(some) > 0);
+        assert_eq!(count_wb(some), 3);
     }
 
     #[test]
-    fn test_has_bb() {
-		let none = 0b0000_0000_1111_1111_1111_1111_0011_1111;
+    fn test_has_bb_count_bb() {
+        let none = 0b0000_0000_1111_1111_1111_1111_0011_1111;
         assert!(has_bb(none) == 0);
-		let some = 0b0000_0000_0000_0000_0000_0000_1100_0000;
+        assert_eq!(count_bb(none), 0);
+        let some = 0b0000_0000_0000_0000_0000_0000_1100_0000;
         assert!(has_bb(some) > 0);
+        assert_eq!(count_bb(some), 3);
     }
 
     #[test]
-    fn test_has_wn() {
-		let none = 0b0000_0000_1111_1100_1111_1111_1111_1111;
+    fn test_has_wn_count_wn() {
+        let none = 0b0000_0000_1111_1100_1111_1111_1111_1111;
         assert!(has_wn(none) == 0);
-		let some = 0b0000_0000_0000_0011_0000_0000_0000_0000;
+        assert_eq!(count_wn(none), 0);
+        let some = 0b0000_0000_0000_0011_0000_0000_0000_0000;
         assert!(has_wn(some) > 0);
+        assert_eq!(count_wn(some), 3);
     }
 
     #[test]
-    fn test_has_bn() {
-		let none = 0b0000_0000_1111_1111_1111_1111_1100_1111;
+    fn test_has_bn_count_wn() {
+        let none = 0b0000_0000_1111_1111_1111_1111_1100_1111;
         assert!(has_bn(none) == 0);
-		let some = 0b0000_0000_0000_0000_0000_0000_0011_0000;
+        assert_eq!(count_bn(none), 0);
+        let some = 0b0000_0000_0000_0000_0000_0000_0011_0000;
         assert!(has_bn(some) > 0);
+        assert_eq!(count_bn(some), 3);
     }
 
     #[test]
-    fn test_has_wp() {
-		let none = 0b0000_0000_1111_1111_0000_1111_1111_1111;
+    fn test_has_wp_count_wp() {
+        let none = 0b0000_0000_1111_1111_0000_1111_1111_1111;
         assert!(has_wp(none) == 0);
-		let some = 0b0000_0000_0000_0000_1111_0000_0000_0000;
+        assert_eq!(count_wp(none), 0);
+        let some = 0b0000_0000_0000_0000_1111_0000_0000_0000;
         assert!(has_wp(some) > 0);
+        assert_eq!(count_wp(some), 15);
     }
 
     #[test]
-    fn test_has_bp() {
-		let none = 0b0000_0000_1111_1111_1111_1111_1111_0000;
+    fn test_has_bp_count_bp() {
+        let none = 0b0000_0000_1111_1111_1111_1111_1111_0000;
         assert!(has_bp(none) == 0);
-		let some = 0b0000_0000_0000_0000_0000_0000_0000_1111;
+        assert_eq!(count_bp(none), 0);
+        let some = 0b0000_0000_0000_0000_0000_0000_0000_1111;
         assert!(has_bp(some) > 0);
+        assert_eq!(count_bp(some), 15);
+    }
+
+    #[test]
+    fn test_get_count() {
+        let none = 0b0000_0000_0000_0000_0000_0000_0000_0000;
+        assert!(get_count(none, WP) == 0);
+        assert!(get_count(none, WN) == 0);
+        assert!(get_count(none, WB) == 0);
+        assert!(get_count(none, WR) == 0);
+        assert!(get_count(none, WQ) == 0);
+        assert!(get_count(none, BP) == 0);
+        assert!(get_count(none, BN) == 0);
+        assert!(get_count(none, BB) == 0);
+        assert!(get_count(none, BR) == 0);
+        assert!(get_count(none, BQ) == 0);
+
+        let some = 0b0000_0000_0000_0000_1111_0000_0000_0000;
+        assert_eq!(get_count(some, WP), 15);
+        let some = 0b0000_0000_0000_0011_0000_0000_0000_0000;
+        assert_eq!(get_count(some, WN), 3);
+        let some = 0b0000_0000_0000_1100_0000_0000_0000_0000;
+        assert_eq!(get_count(some, WB), 3);
+        let some = 0b0000_0000_0011_0000_0000_0000_0000_0000;
+        assert_eq!(get_count(some, WR), 3);
+        let some = 0b0000_0000_1100_0000_0000_0000_0000_0000;
+        assert_eq!(get_count(some, WQ), 3);
+
+        let some = 0b0000_0000_0000_0000_0000_0000_0000_1111;
+        assert_eq!(get_count(some, BP), 15);
+        let some = 0b0000_0000_0000_0000_0000_0000_0011_0000;
+        assert_eq!(get_count(some, BN), 3);
+        let some = 0b0000_0000_0000_0000_0000_0000_1100_0000;
+        assert_eq!(get_count(some, BB), 3);
+        let some = 0b0000_0000_0000_0000_0000_0011_0000_0000;
+        assert_eq!(get_count(some, BR), 3);
+        let some = 0b0000_0000_0000_0000_0000_1100_0000_0000;
+        assert_eq!(get_count(some, BQ), 3);
+    }
+
+    #[test]
+    fn test_set_count() {
+        for p in [WP, BP].into_iter() {
+            let none = 0b0000_0000_0000_0000_0000_0000_0000_0000;
+            let none = set_count(none, *p, 1);
+            assert_eq!(get_count(none, *p), 1);
+            let none = set_count(none, *p, 8);
+            assert_eq!(get_count(none, *p), 8);
+        }
+
+        for p in [WN, WB, WR, WQ,
+                  BN, BB, BR, BQ].into_iter() {
+            let none = 0b0000_0000_0000_0000_0000_0000_0000_0000;
+            let none = set_count(none, *p, 1);
+            assert_eq!(get_count(none, *p), 1);
+            let none = set_count(none, *p, 3);
+            assert_eq!(get_count(none, *p), 3);
+            let none = set_count(none, *p, 15);
+            assert_eq!(get_count(none, *p), 3);
+        }
     }
 }
 
