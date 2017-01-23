@@ -201,6 +201,46 @@ pub fn make_string (m: MaterialSignature) -> String {
     s
 }
 
+//------------------------------------------------------------------------------
+// is_reachable: returns true if a game currently
+//     at a position with the signature <start>, could possibly reach
+//     the signature <target>. This is useful for quick tests for material
+//     searches. For example, if we store the final matsig of every game,
+//     we can speedup a material search by ONLY searching the games that
+//     have matsig_isReachable(searchsig, finalsig) = 1, or have promotions.
+//     Example: if searchsig requires neither side to have queens, but
+//     finalsig for a game shows a WQ (and no promotions), the game could
+//     not possibly match.
+//     If promos is true, only the pawn counts are checked, since other
+//     material could reappear on the board due to a promotion.
+//     If upromo is true, there are underpromotions (to R, B or N) but
+//     if only promos is true, all promotions are to Queens only.
+pub fn is_reachable (mStart: MaterialSignature, mTarget: MaterialSignature, promos: bool, upromo: bool) -> bool {
+    if count_wp(mStart) < count_wp(mTarget)  { return false; }
+    if count_bp(mStart) < count_bp(mTarget)  { return false; }
+
+    // If there are underpromotions, we can only check pawn counts:
+    if upromo { return true; }
+
+    // No underpromotions, so check non-queen piece counts:
+    if count_wr(mStart) < count_wr(mTarget)  { return false; }
+    if count_br(mStart) < count_br(mTarget)  { return false; }
+    if count_wb(mStart) < count_wb(mTarget)  { return false; }
+    if count_bb(mStart) < count_bb(mTarget)  { return false; }
+    if count_wn(mStart) < count_wn(mTarget)  { return false; }
+    if count_bn(mStart) < count_bn(mTarget)  { return false; }
+
+    // If there were promotions we cannot check queen counts:
+    if promos { return true; }
+
+    // Check queen counts:
+    if count_wq(mStart) < count_wq(mTarget)  { return false; }
+    if count_bq(mStart) < count_bq(mTarget)  { return false; }
+
+    return true;
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
