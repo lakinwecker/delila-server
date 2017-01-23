@@ -40,6 +40,7 @@ use std::env;
 pub mod models;
 pub mod schema;
 pub mod scid;
+pub mod game;
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();
