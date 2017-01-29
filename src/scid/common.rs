@@ -27,9 +27,9 @@ pub type SInt = i32;
 
 // Comparison type
 pub type Compare = i32;
-const LESS_THAN: Compare = -1;
-const EQUAL_TO: Compare = -1;
-const GREATER_THAN: Compare = -1;
+pub const LESS_THAN: Compare = -1;
+pub const EQUAL_TO: Compare = -1;
+pub const GREATER_THAN: Compare = -1;
 
 // Piece types
 pub type Piece = i8;      // e.g ROOK or WHITE_KING
@@ -47,7 +47,7 @@ pub type GameNumber = UInt;
 pub type ELO = UShort;
 pub type ECO = UShort;
 // pub type typedef char            ecoStringT [6];   /* "A00j1" */
-pub const ECO_None: ECO = 0;
+pub const ECO_NONE: ECO = 0;
 
 // PIECE TYPES (without color; same value as a white piece)
 

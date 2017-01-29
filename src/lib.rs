@@ -23,14 +23,9 @@ extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate diesel_codegen;
 #[macro_use] extern crate diesel;
-extern crate regex;
 extern crate dotenv;
 
 #[macro_use] extern crate error_chain;
-
-#[macro_use] extern crate nom;
-use nom::IResult::*;
-use regex::Regex;
 
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
@@ -40,7 +35,6 @@ use std::env;
 pub mod models;
 pub mod schema;
 pub mod scid;
-pub mod game;
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();

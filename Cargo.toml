@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Lakin Wecker <lakin@structuredabstraction.com>"]
 
 [dependencies]
+lwchess = { git = "ssh://git@gitlab.com/libase/lwchess.git" }
 diesel = { version = "0.9.0", features = ["chrono"] }
 diesel_codegen = { version = "0.9.0", features = ["sqlite"] }
 dotenv = "0.8.0"
@@ -13,6 +14,4 @@ rocket_contrib = "0.1.5"
 serde = "0.8.22"
 serde_json = "0.8.4"
 serde_derive = "0.8.22"
-nom = { version = "^2.0", features = ["regexp"] }
 error-chain = "0.7.2"
-regex = "0.2.1"
