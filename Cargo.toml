@@ -8,10 +8,11 @@ samson = { git = "ssh://git@github.com/lakinwecker/samson.git" }
 diesel = { version = "0.9.0", features = ["chrono"] }
 diesel_codegen = { version = "0.9.0", features = ["sqlite"] }
 dotenv = "0.8.0"
-rocket = "0.1.5"
-rocket_codegen = "0.1.5"
-rocket_contrib = "0.1.5"
-serde = "0.8.22"
-serde_json = "0.8.4"
-serde_derive = "0.8.22"
-error-chain = "0.7.2"
+rocket = "0.2.2"
+rocket_codegen = "0.2.2"
+rocket_contrib = "0.2.2"
+serde = "0.9.11"
+serde_json = "0.9.9"
+serde_derive = "0.9.11"
+error-chain = "0.10.0"
+ws = "0.6.0"
