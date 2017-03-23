@@ -1,10 +1,6 @@
 #![feature(plugin)]
-#![plugin(rocket_codegen)]
 
 extern crate delila;
-
-extern crate rocket;
-extern crate rocket_contrib;
 
 #[macro_use] extern crate diesel_codegen;
 #[macro_use] extern crate diesel;
@@ -12,40 +8,18 @@ extern crate rocket_contrib;
 use delila::models::*;
 use delila::establish_connection;
 use diesel::prelude::*;
-use rocket_contrib::JSON;
 use delila::schema::database::dsl::*;
-
-/*#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
-}
-#[get("/databases")]
-fn databases() -> Result<JSON<Vec<Database>>, Error> {
-    let connection = establish_connection();
-    let res = database.load::<Database>(&connection);
-    match res {
-        Ok(databases) => Ok(JSON(databases)),
-        Err(e) => Err(e)
-    }
-}
-
-fn main() {
-    rocket::ignite().mount("/", routes![index, databases]).launch();
-}
-*/
 
 // A WebSocket echo server
 extern crate ws;
 
 use std::rc::Rc;
 use std::cell::Cell;
-use std::process::{Command, Child, Stdio};
 
 use ws::{listen, Handler, Sender, Result, Message, Handshake, CloseCode, Error};
 
 struct Server {
-    out: Sender,
-    child: Rc<Cell<Child>>,
+    out: Sender
 }
 
 impl Handler for Server {
@@ -79,12 +53,5 @@ impl Handler for Server {
 }
 
 fn main() {
-    let child = Command::new("../stockfish")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("Stockfish failed to start");
-
-    listen("127.0.0.1:3012", |out| { Server { out: out, child: Rc<Cell<_> >::new(child) }}).unwrap()
+    listen("127.0.0.1:3012", |out| { Server { out: out }}).unwrap()
 } 
