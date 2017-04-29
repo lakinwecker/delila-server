@@ -15,35 +15,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![feature(custom_derive)]
-#![recursion_limit = "1024"]
+//------------------------------------------------------------------------------
+// The various tasks that the server support.
+//------------------------------------------------------------------------------
+pub mod importpgn;
 
-extern crate serde;
-extern crate serde_json;
-#[macro_use] extern crate serde_derive;
-#[macro_use] extern crate diesel_codegen;
-#[macro_use] extern crate diesel;
-extern crate dotenv;
-extern crate ws;
+use ws::Sender;
+use std::thread::Thread;
+use errors::*;
 
-#[macro_use] extern crate error_chain;
-
-use diesel::prelude::*;
-use diesel::sqlite::SqliteConnection;
-use dotenv::dotenv;
-use std::env;
-
-pub mod errors;
-pub mod models;
-pub mod schema;
-pub mod scid;
-pub mod tasks;
-
-pub fn establish_connection() -> SqliteConnection {
-    dotenv().ok();
-
-    let database_url = env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
-    SqliteConnection::establish(&database_url)
-        .expect(&format!("Error connecting to {}", database_url))
+pub struct Task {
+    pub id: u32,
+    pub out: Sender
 }
+
+// A function that takes a string (representing the JSON arguments)
+// And returns an optional thread. If a thread is returned the task has been
+// backgrounded.
+//
+// TODO: Make this type safe like rocket.rs
+pub type TaskRunner = Fn(Task, String) -> Result<Option<Thread>>;
+

@@ -15,35 +15,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![feature(custom_derive)]
-#![recursion_limit = "1024"]
 
-extern crate serde;
-extern crate serde_json;
-#[macro_use] extern crate serde_derive;
-#[macro_use] extern crate diesel_codegen;
-#[macro_use] extern crate diesel;
-extern crate dotenv;
-extern crate ws;
+//--------------------------------------------------------------------------------------------------
+// A task for importing a PGN file.
+//--------------------------------------------------------------------------------------------------
 
-#[macro_use] extern crate error_chain;
+use super::{Task};
+use std::thread::Thread;
+use::errors::*;
+use serde_json;
 
-use diesel::prelude::*;
-use diesel::sqlite::SqliteConnection;
-use dotenv::dotenv;
-use std::env;
-
-pub mod errors;
-pub mod models;
-pub mod schema;
-pub mod scid;
-pub mod tasks;
-
-pub fn establish_connection() -> SqliteConnection {
-    dotenv().ok();
-
-    let database_url = env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
-    SqliteConnection::establish(&database_url)
-        .expect(&format!("Error connecting to {}", database_url))
+#[derive(Serialize, Deserialize, Debug)]
+struct ImportPGNArgs {
+    path: String
+    //target_database: u32
 }
+
+pub fn task(task: Task, args:String) -> Result<Option<Thread>> {
+    println!("importFile! args: {:?}", args);
+    let args: ImportPGNArgs = serde_json::from_str(&args).unwrap();
+    println!("Args.path: {:?}", args.path);
+    Ok(None) 
+}
+

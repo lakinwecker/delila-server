@@ -1,39 +1,94 @@
+// delila - a desktop version of lila.
+// 
+// Copyright (C) 2017 Lakin Wecker <lakin@wecker.ca>
+// 
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// 
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// 
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #![feature(plugin)]
+#![recursion_limit = "1024"]
 
 extern crate delila;
 
-#[macro_use] extern crate diesel_codegen;
-#[macro_use] extern crate diesel;
+#[macro_use]
+extern crate diesel_codegen;
 
-use delila::models::*;
-use delila::establish_connection;
-use diesel::prelude::*;
-use delila::schema::database::dsl::*;
+#[macro_use]
+extern crate diesel;
 
-// A WebSocket echo server
+#[macro_use]
+extern crate serde_derive;
+
+extern crate serde;
+extern crate serde_json;
+
+// Not ours
 extern crate ws;
 
 use std::rc::Rc;
 use std::cell::Cell;
+use std::collections::HashMap;
 
-use ws::{listen, Handler, Sender, Result, Message, Handshake, CloseCode, Error};
+use ws::{listen, Handler, Sender, Result as WsResult, Message, Handshake, CloseCode, Error as WsError};
 
-struct Server {
-    out: Sender
+use diesel::prelude::*;
+
+// Ours
+use delila::models::*;
+use delila::schema::database::dsl::*;
+use delila::establish_connection;
+use delila::tasks::{Task, TaskRunner, importpgn};
+
+use delila::errors::*;
+
+#[derive(Serialize, Deserialize, Debug)]
+struct IncomingMessage {
+    name: String,
+    id: u32,
+    args: String
 }
 
-impl Handler for Server {
 
-    fn on_open(&mut self, _: Handshake) -> Result<()> {
+struct Router
+{
+    out: Sender,
+    commands: HashMap<String, Box<TaskRunner>>
+}
+
+
+impl Handler for Router {
+
+    fn on_open(&mut self, _: Handshake) -> WsResult<()> {
         // We have a new connection, so we increment the connection counter
+        
         Ok(())
     }
 
-    fn on_message(&mut self, msg: Message) -> Result<()> {
-        println!("The message was: {:?}", msg);
+    fn on_message(&mut self, msg: Message) -> WsResult<()> {
+        match msg {
+            Message::Text(txt) => {
+                let incoming: IncomingMessage = serde_json::from_str(&txt).unwrap();
+                let task_runner: &Box<TaskRunner> = self.commands.get(&incoming.name).unwrap();
+                let task: Task = Task{id: incoming.id, out: self.out.clone()};
+                let x = task_runner(task, incoming.args);
+            },
+            Message::Binary(b) => {
+                println!("Unable to handle binary messages!");
+            }
+        }
 
         // Echo the message back
-        self.out.send(msg)
+        self.out.send("Success!")
     }
 
     fn on_close(&mut self, code: CloseCode, reason: &str) {
@@ -46,12 +101,38 @@ impl Handler for Server {
         }
     }
 
-    fn on_error(&mut self, err: Error) {
+    fn on_error(&mut self, err: WsError) {
         println!("The server encountered an error: {:?}", err);
     }
-
 }
 
 fn main() {
-    listen("127.0.0.1:3012", |out| { Server { out: out }}).unwrap()
+    if let Err(ref e) = run() {
+        use ::std::io::Write;
+        let stderr = &mut ::std::io::stderr();
+        let errmsg = "Error writing to stderr";
+
+        writeln!(stderr, "error: {}", e).expect(errmsg);
+
+        for e in e.iter().skip(1) {
+            writeln!(stderr, "caused by: {}", e).expect(errmsg);
+        }
+
+        // The backtrace is not always generated. Try to run this example
+        // with `RUST_BACKTRACE=1`.
+        if let Some(backtrace) = e.backtrace() {
+            writeln!(stderr, "backtrace: {:?}", backtrace).expect(errmsg);
+        }
+
+        ::std::process::exit(1);
+    }
 } 
+
+fn run() -> Result<()> {
+    listen("127.0.0.1:3012", |out| {
+        let mut commands: HashMap<String, Box<TaskRunner>> = HashMap::new();
+        commands.insert("importFile".into(), Box::new(importpgn::task));
+        Router { out: out, commands: commands }
+    }).chain_err(|| "Unable to start server")
+}
+
