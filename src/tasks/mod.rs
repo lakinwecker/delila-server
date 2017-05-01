@@ -18,14 +18,17 @@
 //------------------------------------------------------------------------------
 // The various tasks that the server support.
 //------------------------------------------------------------------------------
-pub mod importpgn;
+pub mod importfile;
 
 use ws::Sender;
 use std::thread::Thread;
 use errors::*;
+use serde;
+use serde_json;
 
-pub struct Task {
+pub struct Request {
     pub id: u32,
+    pub name: String,
     pub out: Sender
 }
 
@@ -34,5 +37,23 @@ pub struct Task {
 // backgrounded.
 //
 // TODO: Make this type safe like rocket.rs
-pub type TaskRunner = Fn(Task, String) -> Result<Option<Thread>>;
+pub type RequestHandler = Fn(Request, String) -> Result<Option<Thread>>;
+
+pub trait RequestDispatch {
+    fn dispatch(&self, request: Request, args: String) -> Result<Option<Thread>>;
+}
+
+pub struct JSONDispatch<T> where T: serde::Deserialize {
+    pub handler: Box<Fn(Request, T) -> Result<Option<Thread>>>
+}
+
+impl<T> RequestDispatch for JSONDispatch<T> where T: serde::Deserialize {
+    fn dispatch(&self, request: Request, args: String) -> Result<Option<Thread>> {
+        serde_json::from_str(&args).chain_err(
+            || "Unable to parse incoming json into the given argument type"
+        ).and_then(|args| {
+            (self.handler)(request, args)
+        })
+    }
+}
 

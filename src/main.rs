@@ -21,6 +21,9 @@
 extern crate delila;
 
 #[macro_use]
+extern crate error_chain;
+
+#[macro_use]
 extern crate diesel_codegen;
 
 #[macro_use]
@@ -47,8 +50,12 @@ use diesel::prelude::*;
 use delila::models::*;
 use delila::schema::database::dsl::*;
 use delila::establish_connection;
-use delila::tasks::{Task, TaskRunner, importpgn};
+use delila::tasks::{Request, RequestHandler, RequestDispatch, JSONDispatch};
+use delila::tasks::{
+    importfile
+};
 
+pub mod errors;
 use delila::errors::*;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -62,7 +69,7 @@ struct IncomingMessage {
 struct Router
 {
     out: Sender,
-    commands: HashMap<String, Box<TaskRunner>>
+    commands: HashMap<String, Box<RequestDispatch>>
 }
 
 
@@ -78,9 +85,9 @@ impl Handler for Router {
         match msg {
             Message::Text(txt) => {
                 let incoming: IncomingMessage = serde_json::from_str(&txt).unwrap();
-                let task_runner: &Box<TaskRunner> = self.commands.get(&incoming.name).unwrap();
-                let task: Task = Task{id: incoming.id, out: self.out.clone()};
-                let x = task_runner(task, incoming.args);
+                let dispatcher: &Box<RequestDispatch> = self.commands.get(&incoming.name).unwrap();
+                let request: Request = Request{id: incoming.id, name: incoming.name, out: self.out.clone()};
+                let x = dispatcher.dispatch(request, incoming.args);
             },
             Message::Binary(b) => {
                 println!("Unable to handle binary messages!");
@@ -130,8 +137,12 @@ fn main() {
 
 fn run() -> Result<()> {
     listen("127.0.0.1:3012", |out| {
-        let mut commands: HashMap<String, Box<TaskRunner>> = HashMap::new();
-        commands.insert("importFile".into(), Box::new(importpgn::task));
+        let mut commands: HashMap<String, Box<RequestDispatch>> = HashMap::new();
+        commands.insert("importFile".into(),
+            Box::new(
+                JSONDispatch::<importfile::ImportFileArgs>{handler: Box::new(importfile::handler)}
+            )
+        );
         Router { out: out, commands: commands }
     }).chain_err(|| "Unable to start server")
 }

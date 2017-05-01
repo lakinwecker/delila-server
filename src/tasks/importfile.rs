@@ -17,23 +17,21 @@
 
 
 //--------------------------------------------------------------------------------------------------
-// A task for importing a PGN file.
+// A request handler for importing a PGN file.
 //--------------------------------------------------------------------------------------------------
 
-use super::{Task};
+use super::{Request};
 use std::thread::Thread;
 use::errors::*;
 use serde_json;
 
 #[derive(Serialize, Deserialize, Debug)]
-struct ImportPGNArgs {
-    path: String
+pub struct ImportFileArgs {
+    pub path: String
     //target_database: u32
 }
 
-pub fn task(task: Task, args:String) -> Result<Option<Thread>> {
-    println!("importFile! args: {:?}", args);
-    let args: ImportPGNArgs = serde_json::from_str(&args).unwrap();
+pub fn handler(request: Request, args:ImportFileArgs) -> Result<Option<Thread>> {
     println!("Args.path: {:?}", args.path);
     Ok(None) 
 }

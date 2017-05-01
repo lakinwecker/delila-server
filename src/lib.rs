@@ -26,7 +26,8 @@ extern crate serde_json;
 extern crate dotenv;
 extern crate ws;
 
-#[macro_use] extern crate error_chain;
+#[macro_use]
+extern crate error_chain;
 
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
