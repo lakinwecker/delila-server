@@ -20,17 +20,34 @@
 // A request handler for importing a PGN file.
 //--------------------------------------------------------------------------------------------------
 
-use super::{Request};
+use super::{Request, Message};
 use::errors::*;
+use std::{thread, time};
+use serde_json;
+
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ImportFileArgs {
+pub struct File {
     pub path: String
     //target_database: u32
 }
 
-pub fn handler(request: Request, args:ImportFileArgs) -> Result<()> {
-    println!("Args.path: {:?}", args.path);
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Progress {
+    pub activity: String,
+    pub progress: f32,
+}
+
+pub fn handler(request: Request, args:File) -> Result<()> {
+    let mut state: Progress = Progress{activity: "Loading ...".into(), progress: 0.0};
+    let increment = 10f32;
+    for i in 0..10 {
+        let _2s = time::Duration::from_millis(2000);
+        thread::sleep(_2s);
+        state.progress += increment;
+        request.send("updateProgress".into(), &state)?
+    }
+
     Ok(()) 
 }
 

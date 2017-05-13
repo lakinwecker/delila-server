@@ -32,6 +32,31 @@ pub struct Request {
     pub name: String,
     pub out: Sender
 }
+impl Request {
+    fn send<T>(&self, methodName: String, args: &T) -> Result<()>
+        where T: serde::Serialize
+    {
+        serde_json::to_string(&args).chain_err(
+            || "Unable to serialize outoing args"
+        ).and_then(|args| {
+            let message = Message{name: methodName, id: self.id, args: args};
+            serde_json::to_string(&message).chain_err(
+                || "Unable to serialize outoing message"
+            ).and_then(|outgoing|  {
+                self.out.send(outgoing).chain_err(
+                    || "Unable to send message"
+                )
+            })
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Message {
+    pub name: String,
+    pub id: u32,
+    pub args: String
+}
 
 // A function that takes a string (representing the JSON arguments)
 // And returns an optional thread. If a thread is returned the task has been

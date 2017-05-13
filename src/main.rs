@@ -44,8 +44,6 @@ extern crate futures_cpupool;
 use std::sync::Arc;
 use std::collections::HashMap;
 
-use ws::{listen, Handler, Sender, Result as WsResult, Message, Handshake, CloseCode, Error as WsError};
-
 // use diesel::prelude::*;
 
 use futures::{Async, Future};
@@ -55,7 +53,7 @@ use futures_cpupool::{CpuPool, CpuFuture};
 //use delila::models::*;
 //use delila::schema::database::dsl::*;
 //use delila::establish_connection;
-use delila::tasks::{Request, RequestDispatch, JSONDispatch};
+use delila::tasks::{Message, Request, RequestDispatch, JSONDispatch};
 use delila::tasks::{
     importfile
 };
@@ -63,34 +61,27 @@ use delila::tasks::{
 pub mod errors;
 use delila::errors::*;
 
-#[derive(Serialize, Deserialize, Debug)]
-struct IncomingMessage {
-    name: String,
-    id: u32,
-    args: String
-}
-
 
 struct Router
 {
-    out: Sender,
+    out: ws::Sender,
     commands: HashMap<String, Arc<RequestDispatch + Send + Sync>>,
     pool: CpuPool,
     futures: std::vec::Vec<CpuFuture<(), Error>>
 }
 
 
-impl Handler for Router {
+impl ws::Handler for Router {
 
-    fn on_open(&mut self, _: Handshake) -> WsResult<()> {
+    fn on_open(&mut self, _: ws::Handshake) -> ws::Result<()> {
         // We have a new connection, so we increment the connection counter
         
         Ok(())
     }
 
-    fn on_message(&mut self, msg: Message) -> WsResult<()> {
+    fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
         match msg {
-            Message::Text(txt) => {
+            ws::Message::Text(txt) => {
                 for i in self.futures.len()..0 {
                     match self.futures[i].poll() {
                         Ok(Async::NotReady) => { },
@@ -98,7 +89,7 @@ impl Handler for Router {
                         Err(_) => { self.futures.swap_remove(i); }
                     }
                 }
-                let incoming: IncomingMessage = serde_json::from_str(&txt).unwrap();
+                let incoming: Message = serde_json::from_str(&txt).unwrap();
                 let dispatcher = self.commands.get(&incoming.name).unwrap().clone();
                 let request: Request = Request{id: incoming.id, name: incoming.name, out: self.out.clone()};
                 let args = incoming.args.clone();
@@ -107,7 +98,7 @@ impl Handler for Router {
                 });
                 self.futures.push(future);
             },
-            Message::Binary(b) => {
+            ws::Message::Binary(b) => {
                 println!("Unable to handle binary messages!");
             }
         }
@@ -116,17 +107,17 @@ impl Handler for Router {
         self.out.send("Success!")
     }
 
-    fn on_close(&mut self, code: CloseCode, reason: &str) {
+    fn on_close(&mut self, code: ws::CloseCode, reason: &str) {
         match code {
-            CloseCode::Normal => println!("The client is done with the connection."),
-            CloseCode::Away   => println!("The client is leaving the site."),
-            CloseCode::Abnormal => println!(
+            ws::CloseCode::Normal => println!("The client is done with the connection."),
+            ws::CloseCode::Away   => println!("The client is leaving the site."),
+            ws::CloseCode::Abnormal => println!(
                 "Closing handshake failed! Unable to obtain closing status from client."),
             _ => println!("The client encountered an error: {}", reason),
         }
     }
 
-    fn on_error(&mut self, err: WsError) {
+    fn on_error(&mut self, err: ws::Error) {
         println!("The server encountered an error: {:?}", err);
     }
 }
@@ -154,11 +145,11 @@ fn main() {
 } 
 
 fn run() -> Result<()> {
-    listen("127.0.0.1:3012", |out| {
+    ws::listen("127.0.0.1:3012", |out| {
         let mut commands: HashMap<String, Arc<RequestDispatch + Send + Sync>> = HashMap::new();
         commands.insert("importFile".into(),
             Arc::new(
-                JSONDispatch::<importfile::ImportFileArgs>{handler: Arc::new(importfile::handler)}
+                JSONDispatch::<importfile::File>{handler: Arc::new(importfile::handler)}
             )
         );
         Router {
