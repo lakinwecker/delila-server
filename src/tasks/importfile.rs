@@ -40,10 +40,11 @@ pub struct Progress {
 
 pub fn handler(request: Request, args:File) -> Result<()> {
     let mut state: Progress = Progress{activity: "Loading ...".into(), progress: 0.0};
+    request.send("updateProgress".into(), &state)?;
     let increment = 10f32;
     for i in 0..10 {
-        let _2s = time::Duration::from_millis(2000);
-        thread::sleep(_2s);
+        let _0_5s = time::Duration::from_millis(500);
+        thread::sleep(_0_5s);
         state.progress += increment;
         request.send("updateProgress".into(), &state)?
     }
