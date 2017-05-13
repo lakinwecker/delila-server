@@ -21,9 +21,7 @@
 //--------------------------------------------------------------------------------------------------
 
 use super::{Request};
-use std::thread::Thread;
 use::errors::*;
-use serde_json;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ImportFileArgs {
@@ -31,8 +29,8 @@ pub struct ImportFileArgs {
     //target_database: u32
 }
 
-pub fn handler(request: Request, args:ImportFileArgs) -> Result<Option<Thread>> {
+pub fn handler(request: Request, args:ImportFileArgs) -> Result<()> {
     println!("Args.path: {:?}", args.path);
-    Ok(None) 
+    Ok(()) 
 }
 

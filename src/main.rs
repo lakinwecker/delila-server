@@ -23,11 +23,11 @@ extern crate delila;
 #[macro_use]
 extern crate error_chain;
 
-#[macro_use]
-extern crate diesel_codegen;
+//#[macro_use]
+//extern crate diesel_codegen;
 
-#[macro_use]
-extern crate diesel;
+//#[macro_use]
+//extern crate diesel;
 
 #[macro_use]
 extern crate serde_derive;
@@ -35,22 +35,27 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 
-// Not ours
 extern crate ws;
 
-use std::rc::Rc;
-use std::cell::Cell;
+extern crate futures;
+extern crate futures_cpupool;
+
+// Not ours
+use std::sync::Arc;
 use std::collections::HashMap;
 
 use ws::{listen, Handler, Sender, Result as WsResult, Message, Handshake, CloseCode, Error as WsError};
 
-use diesel::prelude::*;
+// use diesel::prelude::*;
+
+use futures::{Async, Future};
+use futures_cpupool::{CpuPool, CpuFuture};
 
 // Ours
-use delila::models::*;
-use delila::schema::database::dsl::*;
-use delila::establish_connection;
-use delila::tasks::{Request, RequestHandler, RequestDispatch, JSONDispatch};
+//use delila::models::*;
+//use delila::schema::database::dsl::*;
+//use delila::establish_connection;
+use delila::tasks::{Request, RequestDispatch, JSONDispatch};
 use delila::tasks::{
     importfile
 };
@@ -69,7 +74,9 @@ struct IncomingMessage {
 struct Router
 {
     out: Sender,
-    commands: HashMap<String, Box<RequestDispatch>>
+    commands: HashMap<String, Arc<RequestDispatch + Send + Sync>>,
+    pool: CpuPool,
+    futures: std::vec::Vec<CpuFuture<(), Error>>
 }
 
 
@@ -84,10 +91,21 @@ impl Handler for Router {
     fn on_message(&mut self, msg: Message) -> WsResult<()> {
         match msg {
             Message::Text(txt) => {
+                for i in self.futures.len()..0 {
+                    match self.futures[i].poll() {
+                        Ok(Async::NotReady) => { },
+                        Ok(Async::Ready(_)) => { self.futures.swap_remove(i); },
+                        Err(_) => { self.futures.swap_remove(i); }
+                    }
+                }
                 let incoming: IncomingMessage = serde_json::from_str(&txt).unwrap();
-                let dispatcher: &Box<RequestDispatch> = self.commands.get(&incoming.name).unwrap();
+                let dispatcher = self.commands.get(&incoming.name).unwrap().clone();
                 let request: Request = Request{id: incoming.id, name: incoming.name, out: self.out.clone()};
-                let x = dispatcher.dispatch(request, incoming.args);
+                let args = incoming.args.clone();
+                let future = self.pool.spawn_fn(move || {
+                    dispatcher.dispatch(request, args)
+                });
+                self.futures.push(future);
             },
             Message::Binary(b) => {
                 println!("Unable to handle binary messages!");
@@ -137,13 +155,18 @@ fn main() {
 
 fn run() -> Result<()> {
     listen("127.0.0.1:3012", |out| {
-        let mut commands: HashMap<String, Box<RequestDispatch>> = HashMap::new();
+        let mut commands: HashMap<String, Arc<RequestDispatch + Send + Sync>> = HashMap::new();
         commands.insert("importFile".into(),
-            Box::new(
-                JSONDispatch::<importfile::ImportFileArgs>{handler: Box::new(importfile::handler)}
+            Arc::new(
+                JSONDispatch::<importfile::ImportFileArgs>{handler: Arc::new(importfile::handler)}
             )
         );
-        Router { out: out, commands: commands }
+        Router {
+            out: out,
+            commands: commands,
+            pool: CpuPool::new_num_cpus(),
+            futures: std::vec::Vec::new()
+        }
     }).chain_err(|| "Unable to start server")
 }
 

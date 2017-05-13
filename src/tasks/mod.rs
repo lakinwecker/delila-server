@@ -20,8 +20,9 @@
 //------------------------------------------------------------------------------
 pub mod importfile;
 
+use std::sync::Arc;
+
 use ws::Sender;
-use std::thread::Thread;
 use errors::*;
 use serde;
 use serde_json;
@@ -37,18 +38,16 @@ pub struct Request {
 // backgrounded.
 //
 // TODO: Make this type safe like rocket.rs
-pub type RequestHandler = Fn(Request, String) -> Result<Option<Thread>>;
-
 pub trait RequestDispatch {
-    fn dispatch(&self, request: Request, args: String) -> Result<Option<Thread>>;
+    fn dispatch(&self, request: Request, args: String) -> Result<()>;
 }
 
 pub struct JSONDispatch<T> where T: serde::Deserialize {
-    pub handler: Box<Fn(Request, T) -> Result<Option<Thread>>>
+    pub handler: Arc<Fn(Request, T) -> Result<()> + Send + Sync>
 }
 
 impl<T> RequestDispatch for JSONDispatch<T> where T: serde::Deserialize {
-    fn dispatch(&self, request: Request, args: String) -> Result<Option<Thread>> {
+    fn dispatch(&self, request: Request, args: String) -> Result<()> {
         serde_json::from_str(&args).chain_err(
             || "Unable to parse incoming json into the given argument type"
         ).and_then(|args| {
