@@ -53,6 +53,7 @@ pub fn handler(request: Request, args:File) -> Result<()> {
         let _0_5s = time::Duration::from_millis(500);
         thread::sleep(_0_5s);
         state.progress += increment;
+        info!(request.log, "updateProgress {}", state.progress);
         request.send("updateProgress".into(), &state)?
     }
 

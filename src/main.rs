@@ -29,35 +29,47 @@
              extern crate serde;
 #[macro_use] extern crate serde_derive;
              extern crate serde_json;
+#[macro_use] extern crate slog;
+             extern crate slog_async;
+             extern crate slog_term;
              extern crate ws;
 
              extern crate delila;
 
 // Not ours
-use std::sync::Arc;
+use chrono::Local;
 use std::collections::HashMap;
+use std::fmt::format;
+use std::fs::{File, OpenOptions, create_dir_all};
+use std::sync::Arc;
 use app_dirs::{app_root, get_app_root, AppDataType};
 
 use futures::{Async, Future};
 use futures_cpupool::{CpuPool, CpuFuture};
+
+use slog::Drain;
 
 // Ours
 use delila::tasks::{Message, Request, RequestDispatch, JSONDispatch};
 use delila::tasks::{
     importfile
 };
-use delila::app_info::DELILA_INFO;
+use delila::app_info::{DELILA_INFO, DELILA_VERSION};
 
 pub mod errors;
 use delila::errors::*;
 
+macro_rules! today {
+    () => ( Local::now().format("%Y-%m-%d") )
+}
 
 struct Router
 {
     out: ws::Sender,
     commands: HashMap<String, Arc<RequestDispatch + Send + Sync>>,
     pool: CpuPool,
-    futures: std::vec::Vec<CpuFuture<(), Error>>
+    futures: std::vec::Vec<CpuFuture<(), Error>>,
+    log: slog::Logger
 }
 
 
@@ -81,7 +93,15 @@ impl ws::Handler for Router {
                 }
                 let incoming: Message = serde_json::from_str(&txt).unwrap();
                 let dispatcher = self.commands.get(&incoming.name).unwrap().clone();
-                let request: Request = Request{id: incoming.id, name: incoming.name, out: self.out.clone()};
+                let request: Request = Request{
+                    id: incoming.id,
+                    name: incoming.name.clone(),
+                    out: self.out.clone(),
+                    log: self.log.new(o!(
+                        "name" => incoming.name,
+                        "id" => incoming.id
+                    ))
+                };
                 let args = incoming.args.clone();
                 let future = self.pool.spawn_fn(move || {
                     dispatcher.dispatch(request, args)
@@ -135,24 +155,60 @@ fn main() {
 } 
 
 fn run() -> Result<()> {
-    app_root(AppDataType::UserConfig, &DELILA_INFO)
-    .chain_err(|| "Unable to create app dir for delila.")
-    .and_then(|_| {
-        ws::listen("127.0.0.1:3012", |out| {
-
-            let mut commands: HashMap<String, Arc<RequestDispatch + Send + Sync>> = HashMap::new();
-            commands.insert("importFile".into(),
-                Arc::new(
-                    JSONDispatch::<importfile::File>{handler: Arc::new(importfile::handler)}
-                )
-            );
-            Router {
-                out: out,
-                commands: commands,
-                pool: CpuPool::new_num_cpus(),
-                futures: std::vec::Vec::new()
-            }
-        }).chain_err(|| "Unable to start server")
-    })
+    configure_data_directory()
+    .and_then(configure_logging)
+    .and_then(run_server)
 }
 
+//--------------------------------------------------------------------------------------------------
+fn run_server(log: slog::Logger) -> Result<()> {
+    info!(log, "Starting Server");
+    ws::listen("127.0.0.1:3012", |out| {
+        info!(log, "Listening on 127.0.0.1:3012");
+
+        let mut commands: HashMap<String, Arc<RequestDispatch + Send + Sync>> = HashMap::new();
+        commands.insert("importFile".into(),
+            Arc::new(
+                JSONDispatch::<importfile::File>{handler: Arc::new(importfile::handler)}
+            )
+        );
+        Router {
+            out: out,
+            commands: commands,
+            pool: CpuPool::new_num_cpus(),
+            futures: std::vec::Vec::new(),
+            log: log.clone()
+        }
+    }).chain_err(|| "Unable to start server")
+}
+
+//--------------------------------------------------------------------------------------------------
+fn configure_data_directory() -> Result<std::path::PathBuf> {
+    app_root(AppDataType::UserConfig, &DELILA_INFO)
+    .chain_err(|| "Unable to create app dir for delila.")
+}
+//--------------------------------------------------------------------------------------------------
+fn configure_logging(data_directory: std::path::PathBuf) -> Result<slog::Logger> {
+    let mut log_directory = data_directory;
+    log_directory.push("logs");
+    create_dir_all(log_directory.as_path()).and_then(|_| {
+        log_directory.push(format!("delila.{}.log", today!()));
+        OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log_directory.as_path())
+            .and_then(|file| {
+                let plain_decorator = slog_term::PlainDecorator::new(file);
+                let file_drain = slog_term::FullFormat::new(plain_decorator).build().fuse();
+                let async_file_drain = slog_async::Async::new(file_drain).build().fuse();
+
+                let term_decorator = slog_term::TermDecorator::new().build();
+                let console_drain = slog_term::FullFormat::new(term_decorator).build().fuse();
+                let async_console_drain = slog_async::Async::new(console_drain).build().fuse();
+
+                let drain = slog::Duplicate::new(async_console_drain, async_file_drain).fuse();
+                let _log = slog::Logger::root(drain, o!("version" => DELILA_VERSION));
+                Ok(_log)
+            })
+    }).chain_err(|| "Unable to create logging directory")
+}
