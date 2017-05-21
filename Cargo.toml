@@ -4,9 +4,11 @@ version = "0.1.0"
 authors = ["Lakin Wecker <lakin@structuredabstraction.com>"]
 
 [dependencies]
+app_dirs = "1.1.1"
 samson = { git = "https://github.com/lakinwecker/samson.git" }
 diesel = { version = "0.13.0", features = ["chrono", "sqlite"] }
 diesel_codegen = { version = "0.13.0", features = ["sqlite"] }
+chrono = { version = "0.3.1", features = ["serde", "rustc-serialize"] }
 dotenv = "0.9.0"
 serde = "1.0.7"
 serde_json = "1.0.1"

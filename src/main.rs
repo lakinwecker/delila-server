@@ -18,31 +18,25 @@
 #![feature(plugin)]
 #![recursion_limit = "1024"]
 
-extern crate delila;
 
-#[macro_use]
-extern crate error_chain;
 
-//#[macro_use]
-//extern crate diesel_codegen;
+             extern crate app_dirs;
+             extern crate chrono;
+#[macro_use] extern crate diesel;
+#[macro_use] extern crate error_chain;
+             extern crate futures;
+             extern crate futures_cpupool;
+             extern crate serde;
+#[macro_use] extern crate serde_derive;
+             extern crate serde_json;
+             extern crate ws;
 
-#[macro_use]
-extern crate diesel;
-
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
-extern crate serde_json;
-
-extern crate ws;
-
-extern crate futures;
-extern crate futures_cpupool;
+             extern crate delila;
 
 // Not ours
 use std::sync::Arc;
 use std::collections::HashMap;
+use app_dirs::{app_root, get_app_root, AppDataType};
 
 use futures::{Async, Future};
 use futures_cpupool::{CpuPool, CpuFuture};
@@ -52,6 +46,7 @@ use delila::tasks::{Message, Request, RequestDispatch, JSONDispatch};
 use delila::tasks::{
     importfile
 };
+use delila::app_info::DELILA_INFO;
 
 pub mod errors;
 use delila::errors::*;
@@ -140,19 +135,24 @@ fn main() {
 } 
 
 fn run() -> Result<()> {
-    ws::listen("127.0.0.1:3012", |out| {
-        let mut commands: HashMap<String, Arc<RequestDispatch + Send + Sync>> = HashMap::new();
-        commands.insert("importFile".into(),
-            Arc::new(
-                JSONDispatch::<importfile::File>{handler: Arc::new(importfile::handler)}
-            )
-        );
-        Router {
-            out: out,
-            commands: commands,
-            pool: CpuPool::new_num_cpus(),
-            futures: std::vec::Vec::new()
-        }
-    }).chain_err(|| "Unable to start server")
+    app_root(AppDataType::UserConfig, &DELILA_INFO)
+    .chain_err(|| "Unable to create app dir for delila.")
+    .and_then(|_| {
+        ws::listen("127.0.0.1:3012", |out| {
+
+            let mut commands: HashMap<String, Arc<RequestDispatch + Send + Sync>> = HashMap::new();
+            commands.insert("importFile".into(),
+                Arc::new(
+                    JSONDispatch::<importfile::File>{handler: Arc::new(importfile::handler)}
+                )
+            );
+            Router {
+                out: out,
+                commands: commands,
+                pool: CpuPool::new_num_cpus(),
+                futures: std::vec::Vec::new()
+            }
+        }).chain_err(|| "Unable to start server")
+    })
 }
 

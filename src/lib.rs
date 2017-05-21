@@ -18,22 +18,24 @@
 #![feature(custom_derive)]
 #![recursion_limit = "1024"]
 
-extern crate serde;
-extern crate serde_json;
-#[macro_use] extern crate serde_derive;
-#[macro_use] extern crate diesel_codegen;
+             extern crate app_dirs;
+             extern crate chrono;
 #[macro_use] extern crate diesel;
-extern crate dotenv;
-extern crate ws;
+#[macro_use] extern crate diesel_codegen;
+             extern crate dotenv;
+             extern crate serde;
+             extern crate serde_json;
+#[macro_use] extern crate serde_derive;
+             extern crate ws;
 
-#[macro_use]
-extern crate error_chain;
+#[macro_use] extern crate error_chain;
 
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use dotenv::dotenv;
 use std::env;
 
+pub mod app_info;
 pub mod errors;
 pub mod models;
 pub mod schema;

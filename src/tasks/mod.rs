@@ -73,6 +73,25 @@ pub struct JSONDispatch<T> where T: serde::de::DeserializeOwned {
 
 impl<T> RequestDispatch for JSONDispatch<T> where T: serde::de::DeserializeOwned {
     fn dispatch(&self, request: Request, args: String) -> Result<()> {
+#[derive(Queryable,Serialize,Deserialize)]
+pub struct Database {
+    pub id: i32,
+    pub title: String,
+    pub date_created: String,
+    pub date_modified: String,
+}
+
+#[derive(Queryable,Serialize,Deserialize)]
+pub struct Tag {
+    pub id: i32,
+    pub title: String,
+}
+
+#[derive(Queryable,Serialize,Deserialize)]
+pub struct DatabaseTag {
+    pub id: i32,
+    pub tag_id: i32,
+}
         serde_json::from_str(&args).chain_err(
             || "Unable to parse incoming json into the given argument type"
         ).and_then(|args| {
