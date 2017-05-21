@@ -42,7 +42,7 @@ use std::collections::HashMap;
 use std::fmt::format;
 use std::fs::{File, OpenOptions, create_dir_all};
 use std::sync::Arc;
-use app_dirs::{app_root, get_app_root, AppDataType};
+use app_dirs::{app_dir, AppDataType};
 
 use futures::{Async, Future};
 use futures_cpupool::{CpuPool, CpuFuture};
@@ -155,7 +155,7 @@ fn main() {
 } 
 
 fn run() -> Result<()> {
-    configure_data_directory()
+    configure_logging_directory()
     .and_then(configure_logging)
     .and_then(run_server)
 }
@@ -183,32 +183,31 @@ fn run_server(log: slog::Logger) -> Result<()> {
 }
 
 //--------------------------------------------------------------------------------------------------
-fn configure_data_directory() -> Result<std::path::PathBuf> {
-    app_root(AppDataType::UserConfig, &DELILA_INFO)
+fn configure_logging_directory() -> Result<std::path::PathBuf> {
+    app_dir(AppDataType::UserCache, &DELILA_INFO, "logs")
     .chain_err(|| "Unable to create app dir for delila.")
 }
+
 //--------------------------------------------------------------------------------------------------
 fn configure_logging(data_directory: std::path::PathBuf) -> Result<slog::Logger> {
+    println!("{:?}", data_directory);
     let mut log_directory = data_directory;
-    log_directory.push("logs");
-    create_dir_all(log_directory.as_path()).and_then(|_| {
-        log_directory.push(format!("delila.{}.log", today!()));
-        OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(log_directory.as_path())
-            .and_then(|file| {
-                let plain_decorator = slog_term::PlainDecorator::new(file);
-                let file_drain = slog_term::FullFormat::new(plain_decorator).build().fuse();
-                let async_file_drain = slog_async::Async::new(file_drain).build().fuse();
+    log_directory.push(format!("delila.{}.log", today!()));
+    OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_directory.as_path())
+        .and_then(|file| {
+            let plain_decorator = slog_term::PlainDecorator::new(file);
+            let file_drain = slog_term::FullFormat::new(plain_decorator).build().fuse();
+            let async_file_drain = slog_async::Async::new(file_drain).build().fuse();
 
-                let term_decorator = slog_term::TermDecorator::new().build();
-                let console_drain = slog_term::FullFormat::new(term_decorator).build().fuse();
-                let async_console_drain = slog_async::Async::new(console_drain).build().fuse();
+            let term_decorator = slog_term::TermDecorator::new().build();
+            let console_drain = slog_term::FullFormat::new(term_decorator).build().fuse();
+            let async_console_drain = slog_async::Async::new(console_drain).build().fuse();
 
-                let drain = slog::Duplicate::new(async_console_drain, async_file_drain).fuse();
-                let _log = slog::Logger::root(drain, o!("version" => DELILA_VERSION));
-                Ok(_log)
-            })
-    }).chain_err(|| "Unable to create logging directory")
+            let drain = slog::Duplicate::new(async_console_drain, async_file_drain).fuse();
+            let _log = slog::Logger::root(drain, o!("version" => DELILA_VERSION));
+            Ok(_log)
+        }).chain_err(|| "Unable to open log file")
 }
