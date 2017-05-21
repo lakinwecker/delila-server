@@ -20,6 +20,12 @@
 // A request handler for importing a PGN file.
 //--------------------------------------------------------------------------------------------------
 
+use diesel::prelude::*;
+
+use super::super::models::*;
+use super::super::schema::database::dsl::*;
+use super::super::establish_connection;
+
 use super::{Request, Message};
 use::errors::*;
 use std::{thread, time};
@@ -39,6 +45,7 @@ pub struct Progress {
 }
 
 pub fn handler(request: Request, args:File) -> Result<()> {
+    let conn = establish_connection();
     let mut state: Progress = Progress{activity: "Loading ...".into(), progress: 0.0};
     request.send("updateProgress".into(), &state)?;
     let increment = 10f32;

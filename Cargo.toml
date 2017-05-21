@@ -5,13 +5,13 @@ authors = ["Lakin Wecker <lakin@structuredabstraction.com>"]
 
 [dependencies]
 samson = { git = "https://github.com/lakinwecker/samson.git" }
-diesel = { version = "0.9.0", features = ["chrono"] }
-diesel_codegen = { version = "0.9.0", features = ["sqlite"] }
-dotenv = "0.8.0"
-serde = "0.9.11"
-serde_json = "0.9.9"
-serde_derive = "0.9.11"
+diesel = { version = "0.13.0", features = ["chrono", "sqlite"] }
+diesel_codegen = { version = "0.13.0", features = ["sqlite"] }
+dotenv = "0.9.0"
+serde = "1.0.7"
+serde_json = "1.0.1"
+serde_derive = "1.0.7"
 error-chain = "0.10.0"
-ws = "0.6.0"
-futures = "0.1.9"
+ws = "0.7.1"
+futures = "0.1.13"
 futures-cpupool = "0.1.5"

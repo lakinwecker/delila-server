@@ -67,11 +67,11 @@ pub trait RequestDispatch {
     fn dispatch(&self, request: Request, args: String) -> Result<()>;
 }
 
-pub struct JSONDispatch<T> where T: serde::Deserialize {
+pub struct JSONDispatch<T> where T: serde::de::DeserializeOwned {
     pub handler: Arc<Fn(Request, T) -> Result<()> + Send + Sync>
 }
 
-impl<T> RequestDispatch for JSONDispatch<T> where T: serde::Deserialize {
+impl<T> RequestDispatch for JSONDispatch<T> where T: serde::de::DeserializeOwned {
     fn dispatch(&self, request: Request, args: String) -> Result<()> {
         serde_json::from_str(&args).chain_err(
             || "Unable to parse incoming json into the given argument type"

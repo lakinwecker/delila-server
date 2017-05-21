@@ -26,8 +26,8 @@ extern crate error_chain;
 //#[macro_use]
 //extern crate diesel_codegen;
 
-//#[macro_use]
-//extern crate diesel;
+#[macro_use]
+extern crate diesel;
 
 #[macro_use]
 extern crate serde_derive;
@@ -44,15 +44,10 @@ extern crate futures_cpupool;
 use std::sync::Arc;
 use std::collections::HashMap;
 
-// use diesel::prelude::*;
-
 use futures::{Async, Future};
 use futures_cpupool::{CpuPool, CpuFuture};
 
 // Ours
-//use delila::models::*;
-//use delila::schema::database::dsl::*;
-//use delila::establish_connection;
 use delila::tasks::{Message, Request, RequestDispatch, JSONDispatch};
 use delila::tasks::{
     importfile
