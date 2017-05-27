@@ -29,8 +29,6 @@ use super::super::establish_connection;
 use super::{Request, Message};
 use::errors::*;
 use std::{thread, time};
-use serde_json;
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct File {
@@ -48,9 +46,9 @@ pub fn handler(request: Request, args:File) -> Result<()> {
     let conn = establish_connection();
     let mut state: Progress = Progress{activity: "Loading ...".into(), progress: 0.0};
     request.send("updateProgress".into(), &state)?;
-    let increment = 10f32;
-    for i in 0..10 {
-        let _0_5s = time::Duration::from_millis(500);
+    let increment = 1f32;
+    for i in 0..100 {
+        let _0_5s = time::Duration::from_millis(50);
         thread::sleep(_0_5s);
         state.progress += increment;
         info!(request.log, "updateProgress {}", state.progress);
