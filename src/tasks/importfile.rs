@@ -26,7 +26,7 @@ use super::super::models::*;
 use super::super::schema::database::dsl::*;
 use super::super::establish_connection;
 
-use super::{Request, Message};
+use super::Request;
 use::errors::*;
 use std::{thread, time};
 
@@ -47,7 +47,7 @@ pub fn handler(request: Request, args:File) -> Result<()> {
     let mut state: Progress = Progress{activity: "Loading ...".into(), progress: 0.0};
     request.send("updateProgress".into(), &state)?;
     let increment = 1f32;
-    for i in 0..100 {
+    for _ in 0..100 {
         let _0_5s = time::Duration::from_millis(50);
         thread::sleep(_0_5s);
         state.progress += increment;

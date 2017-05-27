@@ -18,7 +18,7 @@
 #![feature(plugin)]
 #![recursion_limit = "1024"]
 
-
+#![cfg_attr(feature="clippy", plugin(clippy))]
 
              extern crate app_dirs;
              extern crate chrono;
@@ -111,12 +111,11 @@ impl ws::Handler for Server {
                 for i in self.futures.len()..0 {
                     match self.futures[i].poll() {
                         Ok(Async::NotReady) => { },
-                        Ok(Async::Ready(_)) => { self.futures.swap_remove(i); },
-                        Err(_) => { self.futures.swap_remove(i); }
+                        Ok(Async::Ready(_)) | Err(_) => { self.futures.swap_remove(i); }
                     }
                 }
                 let incoming: Message = serde_json::from_str(&txt).unwrap();
-                let dispatcher = self.commands.get(&incoming.name).unwrap().clone();
+                let dispatcher = self.commands[&incoming.name].clone();
                 let request: Request = Request{
                     id: incoming.id,
                     name: incoming.name.clone(),
@@ -183,13 +182,13 @@ fn run() -> Result<()> {
     .and_then(|path_settings| {
         configure_logging(&path_settings.logging_path)
         .and_then(|log| {
-            run_server(path_settings, log)
+            run_server(&path_settings, &log)
         })
     })
 }
 
 //--------------------------------------------------------------------------------------------------
-fn run_server(path_settings: PathSettings, log: slog::Logger) -> Result<()> {
+fn run_server(path_settings: &PathSettings, log: &slog::Logger) -> Result<()> {
     info!(log, "Starting Server");
     ws::listen("127.0.0.1:3012", |out| {
         info!(log, "Listening on 127.0.0.1:3012");

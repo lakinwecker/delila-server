@@ -35,13 +35,13 @@ pub struct Request {
     pub log: slog::Logger
 }
 impl Request {
-    fn send<T>(&self, methodName: String, args: &T) -> Result<()>
+    fn send<T>(&self, method_name: String, args: &T) -> Result<()>
         where T: serde::Serialize
     {
         serde_json::to_string(&args).chain_err(
             || "Unable to serialize outoing args"
         ).and_then(|args| {
-            let message = Message{name: methodName, id: self.id, args: args};
+            let message = Message{name: method_name, id: self.id, args: args};
             serde_json::to_string(&message).chain_err(
                 || "Unable to serialize outoing message"
             ).and_then(|outgoing|  {
