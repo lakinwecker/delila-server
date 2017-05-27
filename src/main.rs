@@ -22,12 +22,10 @@
 
              extern crate app_dirs;
              extern crate chrono;
-#[macro_use] extern crate diesel;
 #[macro_use] extern crate error_chain;
              extern crate futures;
              extern crate futures_cpupool;
              extern crate serde;
-#[macro_use] extern crate serde_derive;
              extern crate serde_json;
 #[macro_use] extern crate slog;
              extern crate slog_async;
@@ -39,8 +37,7 @@
 // Not ours
 use chrono::Local;
 use std::collections::HashMap;
-use std::fmt::format;
-use std::fs::{File, OpenOptions, create_dir_all};
+use std::fs::OpenOptions;
 use std::sync::Arc;
 use app_dirs::{app_dir, AppDataType};
 
