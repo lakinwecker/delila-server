@@ -60,7 +60,7 @@ macro_rules! today {
     () => ( Local::now().format("%Y-%m-%d") )
 }
 
-struct Router
+struct Server
 {
     out: ws::Sender,
     commands: HashMap<String, Arc<RequestDispatch + Send + Sync>>,
@@ -70,7 +70,7 @@ struct Router
 }
 
 
-impl ws::Handler for Router {
+impl ws::Handler for Server {
 
     fn on_open(&mut self, _: ws::Handshake) -> ws::Result<()> {
         // We have a new connection, so we increment the connection counter
@@ -105,7 +105,7 @@ impl ws::Handler for Router {
                 });
                 self.futures.push(future);
             },
-            ws::Message::Binary(b) => {
+            ws::Message::Binary(_) => {
                 println!("Unable to handle binary messages!");
             }
         }
@@ -169,7 +169,7 @@ fn run_server(log: slog::Logger) -> Result<()> {
                 JSONDispatch::<importfile::File>{handler: Arc::new(importfile::handler)}
             )
         );
-        Router {
+        Server {
             out: out,
             commands: commands,
             pool: CpuPool::new_num_cpus(),
