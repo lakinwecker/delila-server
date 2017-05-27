@@ -60,12 +60,39 @@ macro_rules! today {
     () => ( Local::now().format("%Y-%m-%d") )
 }
 
+#[derive(Clone)]
+struct PathSettings
+{
+    pub logging_path: std::path::PathBuf,
+    pub settings_database_path: std::path::PathBuf,
+    pub database_path: std::path::PathBuf,
+}
+impl PathSettings {
+    fn new() -> Result<PathSettings> {
+        app_dir(AppDataType::UserData, &DELILA_INFO, "logs")
+        .and_then(|logging_path| {
+            app_dir(AppDataType::UserConfig, &DELILA_INFO, "settings")
+            .and_then(|settings_path| {
+                app_dir(AppDataType::UserData, &DELILA_INFO, "dbs")
+                .and_then(|database_path| {
+                    Ok(PathSettings {
+                        logging_path: logging_path,
+                        settings_database_path: settings_path,
+                        database_path: database_path
+                    })
+                })
+            })
+        }).chain_err(|| "Unable to create Logging Path")
+    }
+}
+
 struct Server
 {
     out: ws::Sender,
     commands: HashMap<String, Arc<RequestDispatch + Send + Sync>>,
     pool: CpuPool,
     futures: std::vec::Vec<CpuFuture<(), Error>>,
+    path_settings: PathSettings,
     log: slog::Logger
 }
 
@@ -152,13 +179,17 @@ fn main() {
 } 
 
 fn run() -> Result<()> {
-    configure_logging_directory()
-    .and_then(configure_logging)
-    .and_then(run_server)
+    configure_directories()
+    .and_then(|path_settings| {
+        configure_logging(&path_settings.logging_path)
+        .and_then(|log| {
+            run_server(path_settings, log)
+        })
+    })
 }
 
 //--------------------------------------------------------------------------------------------------
-fn run_server(log: slog::Logger) -> Result<()> {
+fn run_server(path_settings: PathSettings, log: slog::Logger) -> Result<()> {
     info!(log, "Starting Server");
     ws::listen("127.0.0.1:3012", |out| {
         info!(log, "Listening on 127.0.0.1:3012");
@@ -174,21 +205,21 @@ fn run_server(log: slog::Logger) -> Result<()> {
             commands: commands,
             pool: CpuPool::new_num_cpus(),
             futures: std::vec::Vec::new(),
+            path_settings: path_settings.clone(),
             log: log.clone()
         }
     }).chain_err(|| "Unable to start server")
 }
 
 //--------------------------------------------------------------------------------------------------
-fn configure_logging_directory() -> Result<std::path::PathBuf> {
-    app_dir(AppDataType::UserCache, &DELILA_INFO, "logs")
-    .chain_err(|| "Unable to create app dir for delila.")
+fn configure_directories() -> Result<PathSettings> {
+    PathSettings::new()
 }
 
 //--------------------------------------------------------------------------------------------------
-fn configure_logging(data_directory: std::path::PathBuf) -> Result<slog::Logger> {
-    println!("{:?}", data_directory);
-    let mut log_directory = data_directory;
+fn configure_logging(logging_path: &std::path::PathBuf) -> Result<slog::Logger> {
+    println!("{:?}", logging_path);
+    let mut log_directory = logging_path.clone();
     log_directory.push(format!("delila.{}.log", today!()));
     OpenOptions::new()
         .create(true)
