@@ -69,20 +69,17 @@ struct PathSettings
 }
 impl PathSettings {
     fn new() -> Result<PathSettings> {
-        app_dir(AppDataType::UserData, &DELILA_INFO, "logs")
-        .and_then(|logging_path| {
-            app_dir(AppDataType::UserConfig, &DELILA_INFO, "settings")
-            .and_then(|settings_path| {
-                app_dir(AppDataType::UserData, &DELILA_INFO, "dbs")
-                .and_then(|database_path| {
-                    Ok(PathSettings {
-                        logging_path: logging_path,
-                        settings_database_path: settings_path,
-                        database_path: database_path
-                    })
-                })
-            })
-        }).chain_err(|| "Unable to create Logging Path")
+        let logging_path = app_dir(AppDataType::UserData, &DELILA_INFO, "logs")
+            .chain_err(|| "Unable to create/find a logging directory")?;
+        let settings_path = app_dir(AppDataType::UserConfig, &DELILA_INFO, "settings")
+            .chain_err(|| "Unable to create/find a settings directory")?;
+        let database_path = app_dir(AppDataType::UserData, &DELILA_INFO, "dbs")
+            .chain_err(|| "Unable to create/find a database directory")?;
+        Ok(PathSettings {
+            logging_path: logging_path,
+            settings_database_path: settings_path,
+            database_path: database_path
+        })
     }
 }
 
