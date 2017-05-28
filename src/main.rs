@@ -191,9 +191,9 @@ fn run_server(path_settings: &PathSettings, log: &slog::Logger) -> Result<()> {
         info!(log, "Listening on 127.0.0.1:3012");
 
         let mut commands: HashMap<String, Arc<RequestDispatch + Send + Sync>> = HashMap::new();
-        commands.insert("importFile".into(),
+        commands.insert("import::importFile".into(),
             Arc::new(
-                JSONDispatch::<importfile::File>{handler: Arc::new(importfile::handler)}
+                JSONDispatch::<importfile::File>{handler: Arc::new(importfile::importFile)}
             )
         );
         Server {

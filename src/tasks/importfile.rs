@@ -42,17 +42,17 @@ pub struct Progress {
     pub progress: f32,
 }
 
-pub fn handler(request: Request, args:File) -> Result<()> {
+pub fn importFile(request: Request, args:File) -> Result<()> {
     let conn = establish_connection();
     let mut state: Progress = Progress{activity: "Loading ...".into(), progress: 0.0};
-    request.send("updateProgress".into(), &state)?;
+    request.send("import::updateProgress".into(), &state)?;
     let increment = 1f32;
     for _ in 0..100 {
         let _0_5s = time::Duration::from_millis(50);
         thread::sleep(_0_5s);
         state.progress += increment;
-        info!(request.log, "updateProgress {}", state.progress);
-        request.send("updateProgress".into(), &state)?
+        info!(request.log, "import::updateProgress {}", state.progress);
+        request.send("import::updateProgress".into(), &state)?
     }
 
     Ok(()) 
