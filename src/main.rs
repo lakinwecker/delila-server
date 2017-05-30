@@ -49,7 +49,8 @@ use slog::Drain;
 // Ours
 use delila::tasks::{Message, Request, RequestDispatch, JSONDispatch};
 use delila::tasks::{
-    importfile
+    initialize,
+    import,
 };
 use delila::app_info::{DELILA_INFO, DELILA_VERSION};
 
@@ -133,8 +134,7 @@ impl ws::Handler for Server {
             }
         }
 
-        // Echo the message back
-        self.out.send("Success!")
+        Ok(()) 
     }
 
     fn on_close(&mut self, code: ws::CloseCode, reason: &str) {
@@ -192,9 +192,10 @@ fn run_server(path_settings: &PathSettings, log: &slog::Logger) -> Result<()> {
 
         let mut commands: HashMap<String, Arc<RequestDispatch + Send + Sync>> = HashMap::new();
         commands.insert("import::importFile".into(),
-            Arc::new(
-                JSONDispatch::<importfile::File>{handler: Arc::new(importfile::importFile)}
-            )
+            Arc::new(JSONDispatch{handler: Arc::new(import::import_file)})
+        );
+        commands.insert("initialize::initialize".into(),
+            Arc::new(JSONDispatch{handler: Arc::new(initialize::initialize)})
         );
         Server {
             out: out,

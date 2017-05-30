@@ -18,7 +18,8 @@
 //------------------------------------------------------------------------------
 // The various tasks that the server support.
 //------------------------------------------------------------------------------
-pub mod importfile;
+pub mod import;
+pub mod initialize;
 
 use std::sync::Arc;
 

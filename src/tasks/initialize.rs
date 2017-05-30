@@ -17,23 +17,27 @@
 
 
 //--------------------------------------------------------------------------------------------------
-// A request handler for importing a PGN file.
+// Requests for managing the database
 //--------------------------------------------------------------------------------------------------
 
 use diesel::prelude::*;
 
-use super::super::models::*;
-use super::super::schema::database::dsl::*;
-use super::super::establish_connection;
+//use super::super::models::*;
+//use super::super::schema::database::dsl::*;
+//use super::super::establish_connection;
 
-use super::Request;
+use super::{Request, Message};
 use::errors::*;
 use std::{thread, time};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct File {
-    pub path: String
-    //target_database: u32
+pub struct Finished {
+    pub finished: bool
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Version {
+    pub version: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -42,18 +46,26 @@ pub struct Progress {
     pub progress: f32,
 }
 
-pub fn importFile(request: Request, args:File) -> Result<()> {
-    let conn = establish_connection();
+pub fn initialize(request: Request, args:Version) -> Result<()> {
     let mut state: Progress = Progress{activity: "Loading ...".into(), progress: 0.0};
-    request.send("import::updateProgress".into(), &state)?;
+    request.send("initialize::updateProgress".into(), &state)?;
     let increment = 1f32;
-    for _ in 0..100 {
-        let _0_5s = time::Duration::from_millis(50);
-        thread::sleep(_0_5s);
-        state.progress += increment;
-        info!(request.log, "import::updateProgress {}", state.progress);
-        request.send("import::updateProgress".into(), &state)?
+    let tasks = vec![
+        "Initializing datastores",
+        "Updating datastore versions",
+        "Reticulating splines",
+        "Checking for updates",
+        "Done",
+    ];
+    for activity in tasks {
+        let _500ms = time::Duration::from_millis(500);
+        thread::sleep(_500ms);
+        state.progress += increment * 20.0f32;
+        state.activity = activity.into();
+        info!(request.log, "initialize::updateProgress {}", state.progress);
+        request.send("initialize::updateProgress".into(), &state)?
     }
+    request.send("initialize::finished".into(), &Finished{finished: true})?;
 
     Ok(()) 
 }
