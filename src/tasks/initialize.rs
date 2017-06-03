@@ -58,8 +58,8 @@ pub fn initialize(request: Request, args:Version) -> Result<()> {
         "Done",
     ];
     for activity in tasks {
-        let _500ms = time::Duration::from_millis(500);
-        thread::sleep(_500ms);
+        let _50ms = time::Duration::from_millis(50);
+        thread::sleep(_50ms);
         state.progress += increment * 20.0f32;
         state.activity = activity.into();
         info!(request.log, "initialize::updateProgress {}", state.progress);
