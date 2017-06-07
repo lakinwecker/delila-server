@@ -7,5 +7,5 @@ error_chain! {
         IO(io::Error);
         Hyper(hyper::error::Error);
         SerdeJson(serde_json::Error);
-	}
+    }
 }
