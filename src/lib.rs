@@ -23,6 +23,7 @@
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_codegen;
              extern crate dotenv;
+             extern crate hyper;
              extern crate serde;
              extern crate serde_json;
 #[macro_use] extern crate serde_derive;
@@ -41,6 +42,7 @@ use std::env;
 pub mod app_info;
 pub mod errors;
 pub mod models;
+pub mod pathsettings;
 pub mod schema;
 pub mod scid;
 pub mod tasks;

@@ -25,6 +25,7 @@
 #[macro_use] extern crate error_chain;
              extern crate futures;
              extern crate futures_cpupool;
+             extern crate hyper;
              extern crate serde;
              extern crate serde_json;
 #[macro_use] extern crate slog;
@@ -39,7 +40,6 @@ use chrono::Local;
 use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::sync::Arc;
-use app_dirs::{app_dir, AppDataType};
 
 use futures::{Async, Future};
 use futures_cpupool::{CpuPool, CpuFuture};
@@ -52,7 +52,8 @@ use delila::tasks::{
     initialize,
     import,
 };
-use delila::app_info::{DELILA_INFO, DELILA_VERSION};
+use delila::app_info::{DELILA_VERSION};
+use delila::pathsettings::{PathSettings};
 
 pub mod errors;
 use delila::errors::*;
@@ -61,28 +62,6 @@ macro_rules! today {
     () => ( Local::now().format("%Y-%m-%d") )
 }
 
-#[derive(Clone)]
-struct PathSettings
-{
-    pub logging_path: std::path::PathBuf,
-    pub settings_database_path: std::path::PathBuf,
-    pub database_path: std::path::PathBuf,
-}
-impl PathSettings {
-    fn new() -> Result<PathSettings> {
-        let logging_path = app_dir(AppDataType::UserData, &DELILA_INFO, "logs")
-            .chain_err(|| "Unable to create/find a logging directory")?;
-        let settings_path = app_dir(AppDataType::UserConfig, &DELILA_INFO, "settings")
-            .chain_err(|| "Unable to create/find a settings directory")?;
-        let database_path = app_dir(AppDataType::UserData, &DELILA_INFO, "dbs")
-            .chain_err(|| "Unable to create/find a database directory")?;
-        Ok(PathSettings {
-            logging_path: logging_path,
-            settings_database_path: settings_path,
-            database_path: database_path
-        })
-    }
-}
 
 struct Server
 {
@@ -121,7 +100,8 @@ impl ws::Handler for Server {
                     log: self.log.new(o!(
                         "name" => incoming.name,
                         "id" => incoming.id
-                    ))
+                    )),
+                    path_settings: self.path_settings.clone()
                 };
                 let args = incoming.args.clone();
                 let future = self.pool.spawn_fn(move || {

@@ -28,12 +28,15 @@ use errors::*;
 use serde;
 use serde_json;
 use slog;
+use super::pathsettings::{PathSettings};
 
+#[derive(Clone)]
 pub struct Request {
     pub id: u32,
     pub name: String,
     pub out: Sender,
-    pub log: slog::Logger
+    pub log: slog::Logger,
+    pub path_settings: PathSettings
 }
 impl Request {
     fn send<T>(&self, method_name: String, args: &T) -> Result<()>
