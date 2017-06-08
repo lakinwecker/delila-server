@@ -17,6 +17,10 @@ impl PathSettings {
         let settings_path = app_dir(AppDataType::UserConfig, &DELILA_INFO, "settings")
             .chain_err(|| "Unable to create/find a settings directory")?;
         let database_path = app_dir(AppDataType::UserData, &DELILA_INFO, "dbs")
+            .and_then(|mut database_path| {
+                database_path.push("delila.db");
+                Ok(database_path)
+            })
             .chain_err(|| "Unable to create/find a database directory")?;
         Ok(PathSettings {
             logging_path: logging_path,

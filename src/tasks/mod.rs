@@ -23,12 +23,15 @@ pub mod initialize;
 
 use std::sync::Arc;
 
-use ws::Sender;
-use errors::*;
+use diesel::sqlite::SqliteConnection;
 use serde;
 use serde_json;
 use slog;
+use ws::Sender;
+
+use errors::*;
 use super::pathsettings::{PathSettings};
+use super::establish_connection;
 
 #[derive(Clone)]
 pub struct Request {
@@ -55,6 +58,9 @@ impl Request {
             })
         })
     }
+    fn get_connection(&self) -> SqliteConnection {
+        establish_connection(&self.path_settings.database_path.to_str().unwrap())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -70,21 +76,21 @@ pub struct Message {
 //
 // TODO: Make this type safe like rocket.rs
 pub trait RequestDispatch {
-    fn dispatch(&self, request: Request, args: String) -> Result<()>;
+    fn dispatch(&self, request: &Request, args: String) -> Result<()>;
 }
 
 pub struct JSONDispatch<T> where T: serde::de::DeserializeOwned {
-    pub handler: Arc<Fn(Request, T) -> Result<()> + Send + Sync>
+    pub handler: Arc<Fn(&Request, T) -> Result<()> + Send + Sync>
 }
 
 impl<T> RequestDispatch for JSONDispatch<T> where T: serde::de::DeserializeOwned {
-    fn dispatch(&self, request: Request, args: String) -> Result<()> {
+    fn dispatch(&self, request: &Request, args: String) -> Result<()> {
         info!(request.log, "Marshalling arguments");
         serde_json::from_str(&args).chain_err(
             || "Unable to parse incoming json into the given argument type"
         ).and_then(|args| {
             info!(request.log, "Invoking handler");
-            (self.handler)(request, args)
+            (self.handler)(&request, args)
         })
     }
 }

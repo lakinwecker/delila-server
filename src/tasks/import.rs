@@ -24,7 +24,6 @@ use diesel::prelude::*;
 
 use super::super::models::*;
 use super::super::schema::database::dsl::*;
-use super::super::establish_connection;
 
 use super::Request;
 use::errors::*;
@@ -42,8 +41,8 @@ pub struct Progress {
     pub progress: f32,
 }
 
-pub fn import_file(request: Request, args:File) -> Result<()> {
-    let conn = establish_connection();
+pub fn import_file(request: &Request, args:File) -> Result<()> {
+    let conn = request.get_connection();
     let mut state: Progress = Progress{activity: "Loading ...".into(), progress: 0.0};
     request.send("import::updateProgress".into(), &state)?;
     let increment = 1f32;

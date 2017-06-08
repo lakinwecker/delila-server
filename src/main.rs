@@ -22,6 +22,7 @@
 
              extern crate app_dirs;
              extern crate chrono;
+             extern crate diesel;
 #[macro_use] extern crate error_chain;
              extern crate futures;
              extern crate futures_cpupool;
@@ -46,6 +47,8 @@ use futures_cpupool::{CpuPool, CpuFuture};
 
 use slog::Drain;
 
+use diesel::migrations::setup_database;
+
 // Ours
 use delila::tasks::{Message, Request, RequestDispatch, JSONDispatch};
 use delila::tasks::{
@@ -54,6 +57,7 @@ use delila::tasks::{
 };
 use delila::app_info::{DELILA_VERSION};
 use delila::pathsettings::{PathSettings};
+use delila::establish_connection;
 
 pub mod errors;
 use delila::errors::*;
@@ -105,7 +109,7 @@ impl ws::Handler for Server {
                 };
                 let args = incoming.args.clone();
                 let future = self.pool.spawn_fn(move || {
-                    dispatcher.dispatch(request, args)
+                    dispatcher.dispatch(&request, args)
                 });
                 self.futures.push(future);
             },
@@ -159,9 +163,22 @@ fn run() -> Result<()> {
     .and_then(|path_settings| {
         configure_logging(&path_settings.logging_path)
         .and_then(|log| {
-            run_server(&path_settings, &log)
+            ensure_database_exists(&path_settings.database_path)
+            .and_then(|_| {
+                run_server(&path_settings, &log)
+            })
         })
     })
+}
+
+//--------------------------------------------------------------------------------------------------
+fn ensure_database_exists(db_path: &std::path::PathBuf) -> Result<()> {
+    if db_path.exists() {
+        return Ok(())
+    }
+    let conn = establish_connection(&db_path.to_str().unwrap());
+    setup_database(&conn);
+    Ok(())
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -195,7 +212,6 @@ fn configure_directories() -> Result<PathSettings> {
 
 //--------------------------------------------------------------------------------------------------
 fn configure_logging(logging_path: &std::path::PathBuf) -> Result<slog::Logger> {
-    println!("{:?}", logging_path);
     let mut log_directory = logging_path.clone();
     log_directory.push(format!("delila.{}.log", today!()));
     OpenOptions::new()
