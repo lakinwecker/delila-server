@@ -34,6 +34,8 @@ use super::{Request, Message};
 use ::errors::*;
 use std::{thread, time};
 
+use diesel::migrations::run_pending_migrations;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Finished {
     pub finished: bool
@@ -50,14 +52,20 @@ pub struct Progress {
     pub progress: f32,
 }
 
+pub fn run_migrations(request: &Request) -> Result<()>
+{
+    run_pending_migrations(&request.get_connection())
+        .chain_err(|| "Unable to run database migrations during startup")
+}
+
 pub fn initialize(request: &Request, args:Version) -> Result<()> {
-    let mut state: Progress = Progress{activity: "Loading ...".into(), progress: 0.0};
+
+    let mut state: Progress = Progress{activity: "Running database migrations".into(), progress: 0.0};
     request.send("initialize::updateProgress".into(), &state)?;
+    run_migrations(&request)?;
 
     let increment = 1f32;
     let tasks = vec![
-        "Initializing datastores",
-        "Updating datastore versions",
         "Reticulating splines",
         "Checking for updates",
         "Done",

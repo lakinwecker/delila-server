@@ -47,7 +47,7 @@ use futures_cpupool::{CpuPool, CpuFuture};
 
 use slog::Drain;
 
-use diesel::migrations::{run_pending_migrations,setup_database};
+use diesel::migrations::setup_database;
 
 // Ours
 use delila::tasks::{Message, Request, RequestDispatch, JSONDispatch};
@@ -178,7 +178,6 @@ fn ensure_database_exists(db_path: &std::path::PathBuf) -> Result<()> {
     }
     let conn = establish_connection(&db_path.to_str().unwrap());
     setup_database(&conn);
-    run_pending_migrations(&conn);
     Ok(())
 }
 
