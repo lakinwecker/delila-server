@@ -23,6 +23,7 @@
              extern crate app_dirs;
              extern crate chrono;
              extern crate diesel;
+             extern crate diesel_migrations;
 #[macro_use] extern crate error_chain;
              extern crate futures;
              extern crate futures_cpupool;
@@ -47,7 +48,7 @@ use futures_cpupool::{CpuPool, CpuFuture};
 
 use slog::Drain;
 
-use diesel::migrations::setup_database;
+use diesel_migrations::setup_database;
 
 // Ours
 use delila::tasks::{Message, Request, RequestDispatch, JSONDispatch};
@@ -177,8 +178,10 @@ fn ensure_database_exists(db_path: &std::path::PathBuf) -> Result<()> {
         return Ok(())
     }
     let conn = establish_connection(&db_path.to_str().unwrap());
-    setup_database(&conn);
-    Ok(())
+    // TODO(lakin): deal with this error.
+    setup_database(&conn).and_then(|_| {
+        Ok(())
+    }).chain_err(|| "Unable to setup the database")
 }
 
 //--------------------------------------------------------------------------------------------------

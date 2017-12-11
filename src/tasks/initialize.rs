@@ -25,29 +25,43 @@ use diesel::prelude::*;
 //use super::super::models::*;
 //use super::super::schema::database::dsl::*;
 
-use std::path::Path;
-use std::{io, fs};
-use std::io::{Read, Write, BufWriter, BufReader};
-use hyper::Client;
+//use std::path::Path;
+//use std::{io, fs};
+//use std::io::{Read, Write, BufWriter, BufReader};
+//use hyper::Client;
 
-use super::{Request, Message};
+use super::Request;
 use ::errors::*;
 use std::{thread, time};
+use app_info::DELILA_VERSION;
 
-use diesel::migrations::run_pending_migrations;
+use diesel_migrations::run_pending_migrations;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Finished {
+pub struct InitializeError {
+    pub message: String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InitializeFinished {
     pub finished: bool
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Version {
-    pub version: String
+pub struct VersionId(String);
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VersionMismatchError {
+    pub server_version: VersionId
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Progress {
+pub struct Version {
+    pub client_version: VersionId
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct InitializeProgress {
     pub activity: String,
     pub progress: f32,
 }
@@ -58,28 +72,40 @@ pub fn run_migrations(request: &Request) -> Result<()>
         .chain_err(|| "Unable to run database migrations during startup")
 }
 
-pub fn initialize(request: &Request, args:Version) -> Result<()> {
+pub fn initialize(request: &Request, version:Version) -> Result<()> {
+    let Version {client_version: VersionId(client_version)} = version;
+    if client_version != DELILA_VERSION {
+        let mismatch =
+        request.send(
+            "VersionMismatchError".into(),
+            &VersionMismatchError{server_version: VersionId(DELILA_VERSION.into())}
+        );
+    } else {
+        let mut state: InitializeProgress = InitializeProgress{
+            activity: "Running database migrations".into(),
+            progress: 0.0
+        };
+        request.send("InitializeProgress".into(), &state)?;
+        // TODO(lakin): This error should be sent to the client as well.
+        run_migrations(&request)?;
 
-    let mut state: Progress = Progress{activity: "Running database migrations".into(), progress: 0.0};
-    request.send("initialize::updateProgress".into(), &state)?;
-    run_migrations(&request)?;
-
-    let increment = 1f32;
-    let tasks = vec![
-        "Reticulating splines",
-        "Checking for updates",
-        "Done",
-    ];
-    for activity in tasks {
-        let _50ms = time::Duration::from_millis(50);
-        thread::sleep(_50ms);
-        state.progress += increment * 20.0f32;
-        state.activity = activity.into();
-        info!(request.log, "initialize::updateProgress {}", state.progress);
-        request.send("initialize::updateProgress".into(), &state)?
+        let increment = 1f32;
+        let tasks = vec![
+            "Reticulating splines",
+            "Checking for updates",
+            "Done",
+        ];
+        for activity in tasks {
+            let _50ms = time::Duration::from_millis(50);
+            thread::sleep(_50ms);
+            state.progress += increment * 20.0f32;
+            state.activity = activity.into();
+            info!(request.log, "InitializeProgress {}", state.progress);
+            request.send("InitializeProgress".into(), &state)?
+        }
+        request.send("InitializeFinished".into(), &InitializeFinished{finished: true})?;
     }
-    request.send("initialize::finished".into(), &Finished{finished: true})?;
 
-    Ok(()) 
+    Ok(())
 }
 

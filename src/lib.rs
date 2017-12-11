@@ -21,7 +21,8 @@
              extern crate app_dirs;
              extern crate chrono;
 #[macro_use] extern crate diesel;
-#[macro_use] extern crate diesel_codegen;
+#[macro_use] extern crate diesel_infer_schema;
+#[macro_use] extern crate diesel_migrations;
              extern crate hyper;
              extern crate serde;
              extern crate serde_json;
