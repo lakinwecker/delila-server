@@ -1,17 +1,25 @@
-CREATE TABLE database (
-  id INTEGER PRIMARY KEY NOT NULL,
-  title VARCHAR NOT NULL,
-  date_created VARCHAR NOT NULL,
-  date_modified VARCHAR NOT NULL
+CREATE TABLE position (
+    id INTEGER PRIMARY KEY NOT NULL,
+    hash_1 INTEGER NOT NULL,
+    hash_2 INTEGER NOT NULL
 );
-CREATE TABLE tag (
-  id INTEGER PRIMARY KEY NOT NULL,
-  title VARCHAR NOT NULL
+CREATE TABLE _move (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uci INTEGER not null,
+    starting_position_id INTEGER NOT NULL,
+    ending_position_id INTEGER NOT NULL
 );
-CREATE TABLE database_tag (
-  id INTEGER PRIMARY KEY NOT NULL,
-  database_id INTEGER NOT NULL,
-  tag_id INTEGER NOT NULL
+CREATE TABLE line_move (
+    id INTEGER PRIMARY KEY NOT NULL,
+    move_id INTEGER NOT NULL,
+    line_id INTEGER NOT NULL,
+    -- The ply implied colour. n % 2 == 0 -> black || n % 2 == 1 -> white
+    ply INTEGER NOT NULL
+);
+CREATE TABLE line (
+    id INTEGER PRIMARY KEY NOT NULL,
+    starting_position_id INTEGER NOT NULL,
+    parent_line_id INTEGER NULL
 );
 CREATE TABLE player (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -41,5 +49,7 @@ CREATE TABLE game (
     date VARCHAR NOT NULL,
     round INTEGER NULL,
     result VARCHAR NOT NULL,
-    pgn VARCHAR NOT NULL
+    pgn VARCHAR NOT NULL,
+    -- the line that represents the deconstructed game.
+    line_id INTEGER NOT NULL 
 );

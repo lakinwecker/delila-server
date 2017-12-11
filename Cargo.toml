@@ -5,7 +5,7 @@ authors = ["Lakin Wecker <lakin@structuredabstraction.com>"]
 
 [dependencies]
 app_dirs = "1.1.1"
-chrono = { version = "0.3.1", features = ["serde", "rustc-serialize"] }
+chrono = { version = "0.4.0", features = ["serde", "rustc-serialize"] }
 clippy = {version = "*", optional = true}
 diesel_codegen = { version = "0.13.0", features = ["sqlite"] }
 diesel = { version = "0.13.0", features = ["chrono", "sqlite"] }
@@ -18,7 +18,7 @@ samson = { git = "https://github.com/lakinwecker/samson.git" }
 serde = "1.0.7"
 serde_derive = "1.0.7"
 serde_json = "1.0.1"
-slog = "2"
-slog-async = "2"
-slog-term = "2"
+slog = "2.0.2"
+slog-async = "2.0.1"
+slog-term = "2.0.2"
 ws = "0.7.1"

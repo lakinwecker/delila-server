@@ -1,6 +1,7 @@
-DROP TABLE database;
-DROP TABLE tag;
-DROP TABLE database_tag;
+DROP TABLE position;
+DROP TABLE move;
+DROP TABLE line_move;
+DROP TABLE line;
 DROP TABLE player;
 DROP TABLE event;
 DROP TABLE site;

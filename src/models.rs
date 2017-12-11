@@ -1,23 +1,27 @@
 use chrono::prelude::*;
 
 #[derive(Queryable,Serialize,Deserialize)]
-pub struct Database {
-    pub id: i32,
-    pub title: String,
-    pub date_created: String,
-    pub date_modified: String,
+pub struct Position {
+    pub id: i64,
+    pub hash_1: i64,
+    pub hash_2: i64,
 }
 
 #[derive(Queryable,Serialize,Deserialize)]
-pub struct Tag {
-    pub id: i32,
-    pub title: String,
+pub struct _Move {
+    pub id: i64,
+    pub uci: String,
+    pub starting_position_id: i64,
+    pub ending_position_id: i64,
 }
 
 #[derive(Queryable,Serialize,Deserialize)]
-pub struct DatabaseTag {
-    pub id: i32,
-    pub tag_id: i32,
+pub struct LineMove {
+    pub id: i64,
+    pub move_id: i64,
+    pub tag_id: i64,
+    pub line_id: i64,
+    pub ply: i16,
 }
 
 #[derive(Queryable,Serialize,Deserialize)]

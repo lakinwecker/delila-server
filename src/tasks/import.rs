@@ -23,7 +23,7 @@
 use diesel::prelude::*;
 
 use super::super::models::*;
-use super::super::schema::database::dsl::*;
+//use super::super::schema::database::dsl::*;
 
 use super::Request;
 use::errors::*;
