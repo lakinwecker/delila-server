@@ -83,7 +83,6 @@ impl ws::Handler for Server {
 
     fn on_open(&mut self, _: ws::Handshake) -> ws::Result<()> {
         // We have a new connection, so we increment the connection counter
-        
         Ok(())
     }
 
